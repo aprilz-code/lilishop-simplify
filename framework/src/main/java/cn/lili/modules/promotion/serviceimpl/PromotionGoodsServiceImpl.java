@@ -2,14 +2,12 @@ package cn.lili.modules.promotion.serviceimpl;
 
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.utils.BeanUtil;
 import cn.lili.common.utils.DateUtil;
-import cn.lili.mybatis.util.PageUtil;
 import cn.lili.common.vo.PageVO;
-import cn.lili.modules.distribution.entity.dos.DistributionGoods;
-import cn.lili.modules.distribution.service.DistributionGoodsService;
 import cn.lili.modules.goods.entity.dos.GoodsSku;
 import cn.lili.modules.goods.entity.dto.GoodsSearchParams;
 import cn.lili.modules.goods.entity.enums.GoodsAuthEnum;
@@ -17,21 +15,19 @@ import cn.lili.modules.goods.entity.enums.GoodsStatusEnum;
 import cn.lili.modules.goods.service.GoodsSkuService;
 import cn.lili.modules.order.cart.entity.vo.CartSkuVO;
 import cn.lili.modules.order.cart.entity.vo.FullDiscountVO;
-import cn.lili.modules.promotion.entity.dos.PointsGoods;
 import cn.lili.modules.promotion.entity.dos.PromotionGoods;
 import cn.lili.modules.promotion.entity.dos.SeckillApply;
 import cn.lili.modules.promotion.entity.dto.BasePromotion;
 import cn.lili.modules.promotion.entity.dto.PromotionGoodsDTO;
 import cn.lili.modules.promotion.entity.enums.CouponScopeTypeEnum;
 import cn.lili.modules.promotion.entity.enums.PromotionStatusEnum;
-import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.modules.promotion.entity.vos.CouponVO;
 import cn.lili.modules.promotion.entity.vos.PromotionGoodsSearchParams;
 import cn.lili.modules.promotion.entity.vos.SeckillVO;
 import cn.lili.modules.promotion.mapper.PromotionGoodsMapper;
-import cn.lili.modules.promotion.service.PointsGoodsService;
 import cn.lili.modules.promotion.service.PromotionGoodsService;
 import cn.lili.modules.promotion.service.SeckillApplyService;
+import cn.lili.mybatis.util.PageUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -80,23 +76,7 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
      */
     @Autowired
     private GoodsSkuService goodsSkuService;
-    /**
-     * 积分商品
-     */
-    @Autowired
-    private PointsGoodsService pointsGoodsService;
-    /**
-     * 分销商品
-     */
-    @Autowired
-    private DistributionGoodsService distributionGoodsService;
 
-    @Override
-    public PromotionGoods findByPromotion(String promotionId, String skuId) {
-        LambdaQueryWrapper<PromotionGoods> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(PromotionGoods::getPromotionId, promotionId).eq(PromotionGoods::getSkuId, skuId);
-        return new PromotionGoods();
-    }
 
     @Override
     public void removePromotionGoods(List<PromotionGoods> promotionGoodsList, PromotionTypeEnum promotionType) {
@@ -108,9 +88,52 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
 
     @Override
     public List<PromotionGoods> findNowSkuPromotion(String skuId) {
-        return this.list(new LambdaQueryWrapper<PromotionGoods>()
+
+        GoodsSku sku = goodsSkuService.getGoodsSkuByIdFromCache(skuId);
+        if (sku == null) {
+            return new ArrayList<>();
+        }
+
+        List<PromotionGoods> promotionGoods = new ArrayList<>(this.list(new LambdaQueryWrapper<PromotionGoods>()
                 .eq(PromotionGoods::getSkuId, skuId)
-                .eq(PromotionGoods::getPromotionStatus, PromotionStatusEnum.START.name()));
+//                .ge(PromotionGoods::getStartTime, new Date())
+                .eq(PromotionGoods::getPromotionStatus, PromotionStatusEnum.START.name())));
+
+
+        //单独检查，添加适用于全品类的满优惠活动
+        Query query = new Query();
+        query.addCriteria(Criteria.where("promotionStatus").is(PromotionStatusEnum.START.name()));
+        query.addCriteria(Criteria.where("startTime").lte(System.currentTimeMillis()));
+        List<FullDiscountVO> fullDiscountVOS = mongoTemplate.find(query, FullDiscountVO.class);
+        for (FullDiscountVO fullDiscountVO : fullDiscountVOS) {
+            if (fullDiscountVO.getPromotionGoodsList() == null &&
+                    sku.getStoreId().equals(fullDiscountVO.getStoreId())) {
+                PromotionGoods p = new PromotionGoods(sku);
+                p.setPromotionId(fullDiscountVO.getId());
+                p.setPromotionStatus(fullDiscountVO.getPromotionStatus());
+                p.setPromotionType(PromotionTypeEnum.FULL_DISCOUNT.name());
+                p.setStartTime(fullDiscountVO.getStartTime());
+                p.setEndTime(fullDiscountVO.getEndTime());
+                promotionGoods.add(p);
+            }
+        }
+        //单独检查，添加适用于全品类的全平台或属于当前店铺的优惠券活动
+        List<CouponVO> couponVOS = mongoTemplate.find(query, CouponVO.class);
+        for (CouponVO couponVO : couponVOS) {
+            boolean aLLScopeType = (couponVO.getPromotionGoodsList() == null
+                    && couponVO.getScopeType().equals(CouponScopeTypeEnum.ALL.name())
+                    && (("0").equals(couponVO.getStoreId()) || sku.getStoreId().equals(couponVO.getStoreId())));
+            if (aLLScopeType) {
+                PromotionGoods p = new PromotionGoods(sku);
+                p.setPromotionId(couponVO.getId());
+                p.setPromotionStatus(couponVO.getPromotionStatus());
+                p.setPromotionType(PromotionTypeEnum.COUPON.name());
+                p.setStartTime(couponVO.getStartTime());
+                p.setEndTime(couponVO.getEndTime());
+                promotionGoods.add(p);
+            }
+        }
+        return promotionGoods;
     }
 
     @Override
@@ -123,70 +146,6 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
             //下一次更新时间
             cartSkuVO.setUpdatePromotionTime(date);
         }
-        PointsGoods pointsGoods = pointsGoodsService.getPointsGoodsDetailBySkuId(cartSkuVO.getGoodsSku().getId());
-        if (pointsGoods != null) {
-            cartSkuVO.setPoint(pointsGoods.getPoints().intValue());
-        }
-        DistributionGoods distributionGoods = distributionGoodsService.distributionGoodsVOBySkuId(cartSkuVO.getGoodsSku().getId());
-        if (distributionGoods != null) {
-            cartSkuVO.setDistributionGoods(distributionGoods);
-        }
-    }
-
-    /**
-     * 获取购物车商品的促销活动
-     *
-     * @param cartSkuVO 购物车中的产品
-     */
-    @Override
-    public void getCartSkuPromotion(CartSkuVO cartSkuVO) {
-        Date date = DateUtil.getCurrentDayEndTime();
-        LambdaQueryWrapper<PromotionGoods> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(PromotionGoods::getSkuId, cartSkuVO.getGoodsSku().getId()).eq(PromotionGoods::getPromotionStatus, PromotionStatusEnum.START.name());
-        queryWrapper.le(PromotionGoods::getStartTime, date);
-        //获取有效的促销活动
-        List<PromotionGoods> promotionGoods = this.list(queryWrapper);
-        //同步查询缓存中的促销活动商品的库存
-        for (PromotionGoods promotionGood : promotionGoods) {
-            Integer goodsStock = this.getPromotionGoodsStock(PromotionTypeEnum.valueOf(promotionGood.getPromotionType()), promotionGood.getPromotionId(), promotionGood.getSkuId());
-            promotionGood.setQuantity(goodsStock);
-        }
-        //单独检查，添加适用于全品类的满优惠活动
-        Query query = new Query();
-        query.addCriteria(Criteria.where("promotionStatus").is(PromotionStatusEnum.START.name()));
-        query.addCriteria(Criteria.where("startTime").lte(date));
-        List<FullDiscountVO> fullDiscountVOS = mongoTemplate.find(query, FullDiscountVO.class);
-        for (FullDiscountVO fullDiscountVO : fullDiscountVOS) {
-            if (fullDiscountVO.getPromotionGoodsList() == null && fullDiscountVO.getNumber() == -1 &&
-                    cartSkuVO.getStoreId().equals(fullDiscountVO.getStoreId())) {
-                PromotionGoods p = new PromotionGoods(cartSkuVO.getGoodsSku());
-                p.setPromotionId(fullDiscountVO.getId());
-                p.setPromotionStatus(fullDiscountVO.getPromotionStatus());
-                p.setPromotionType(PromotionTypeEnum.FULL_DISCOUNT.name());
-                p.setStartTime(fullDiscountVO.getStartTime());
-                p.setEndTime(fullDiscountVO.getEndTime());
-                promotionGoods.add(p);
-            }
-        }
-        //单独检查，添加适用于全品类的全平台或属于当前店铺的满优惠活动
-        List<CouponVO> couponVOS = mongoTemplate.find(query, CouponVO.class);
-        for (CouponVO couponVO : couponVOS) {
-            boolean aLLScopeType = (couponVO.getPromotionGoodsList() == null
-                    && couponVO.getScopeType().equals(CouponScopeTypeEnum.ALL.name())
-                    && (("0").equals(couponVO.getStoreId()) || cartSkuVO.getStoreId().equals(couponVO.getStoreId())));
-            if (aLLScopeType) {
-                PromotionGoods p = new PromotionGoods(cartSkuVO.getGoodsSku());
-                p.setPromotionId(couponVO.getId());
-                p.setPromotionStatus(couponVO.getPromotionStatus());
-                p.setPromotionType(PromotionTypeEnum.COUPON.name());
-                p.setStartTime(couponVO.getStartTime());
-                p.setEndTime(couponVO.getEndTime());
-                promotionGoods.add(p);
-            }
-        }
-        cartSkuVO.setPromotions(promotionGoods);
-        //下一次更新时间
-        cartSkuVO.setUpdatePromotionTime(date);
     }
 
     @Override
@@ -211,8 +170,8 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
         promotionGoodsPage.setSize(page.getSize());
         promotionGoodsPage.setTotal(page.getTotal());
         promotionGoodsPage.setPages(page.getPages());
-        for (PromotionGoods record : page.getRecords()) {
-            PromotionGoodsDTO promotionGoodsDTO = this.wrapperPromotionGoodsDTO(record);
+        for (PromotionGoods promotionGoods : page.getRecords()) {
+            PromotionGoodsDTO promotionGoodsDTO = this.wrapperPromotionGoodsDTO(promotionGoods);
             promotionGoodsList.add(promotionGoodsDTO);
         }
         promotionGoodsPage.setRecords(promotionGoodsList);
@@ -226,8 +185,8 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
         promotionGoodsPage.setCurrent(pageVo.getPageNumber());
         Date now = new Date();
         Query query = new Query();
-        query.addCriteria(Criteria.where("startTime").lt(now));
-        query.addCriteria(Criteria.where("endTime").gt(now));
+        query.addCriteria(Criteria.where("startTime").lte(now));
+        query.addCriteria(Criteria.where("endTime").gte(now));
         List<PromotionGoodsDTO> promotionGoodsDTOList = new ArrayList<>();
         int total = 0;
         //根据促销活动类型的不同，将满足当前促销活动类型且正在进行的促销商品返回出去
@@ -283,16 +242,43 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
         String promotionStockKey = PromotionGoodsService.getPromotionGoodsStockCacheKey(typeEnum, promotionId, skuId);
         String promotionGoodsStock = stringRedisTemplate.opsForValue().get(promotionStockKey);
 
-        PromotionGoods promotionGoods = this.getPromotionGoods(typeEnum, promotionId, skuId);
-        if (promotionGoods == null) {
-            throw new ServiceException(ResultCode.PROMOTION_GOODS_NOT_EXIT);
-        }
-        if (promotionGoodsStock != null && CharSequenceUtil.isNotEmpty(promotionGoodsStock) && promotionGoods.getQuantity().equals(Convert.toInt(promotionGoodsStock))) {
+        //库存如果不为空，则直接返回
+        if (promotionGoodsStock != null && CharSequenceUtil.isNotEmpty(promotionGoodsStock)) {
             return Convert.toInt(promotionGoodsStock);
-        } else {
+        }
+        //如果为空
+        else {
+            //获取促销商品，如果不存在促销商品，则返回0
+            PromotionGoods promotionGoods = this.getPromotionGoods(typeEnum, promotionId, skuId);
+            if (promotionGoods == null) {
+                return 0;
+            }
+            //否则写入新的促销商品库存
             stringRedisTemplate.opsForValue().set(promotionStockKey, promotionGoods.getQuantity().toString());
             return promotionGoods.getQuantity();
         }
+    }
+
+    @Override
+    public List<Integer> getPromotionGoodsStock(PromotionTypeEnum typeEnum, String promotionId, List<String> skuId) {
+        //获取促销商品，如果不存在促销商品，则返回0
+        List<PromotionGoods> promotionGoods = this.getPromotionGoods(typeEnum, promotionId, skuId);
+        //接收数据
+        List<Integer> result = new ArrayList<>(skuId.size());
+        for (String sid : skuId) {
+            Integer stock = null;
+            for (PromotionGoods pg : promotionGoods) {
+                if (sid.equals(pg.getSkuId())) {
+                    stock = pg.getQuantity();
+                }
+            }
+            //如果促销商品不存在，给一个默认值
+            if (stock == null) {
+                stock = 0;
+            }
+            result.add(stock);
+        }
+        return result;
     }
 
     /**
@@ -308,6 +294,22 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
         LambdaQueryWrapper<PromotionGoods> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(PromotionGoods::getPromotionType, typeEnum.name()).eq(PromotionGoods::getPromotionId, promotionId).eq(PromotionGoods::getSkuId, skuId);
         return this.getOne(queryWrapper);
+    }
+
+    /**
+     * 根据条件获取促销活动商品详情
+     *
+     * @param typeEnum    促销类型
+     * @param promotionId 促销活动id
+     * @param skuId       商品skuId
+     * @return 促销活动商品详情
+     */
+    @Override
+    public List<PromotionGoods> getPromotionGoods(PromotionTypeEnum typeEnum, String promotionId, List<String> skuId) {
+        LambdaQueryWrapper<PromotionGoods> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(PromotionGoods::getPromotionType, typeEnum.name()).eq(PromotionGoods::getPromotionId, promotionId)
+                .in(PromotionGoods::getSkuId, skuId);
+        return this.list(queryWrapper);
     }
 
     /**
@@ -378,8 +380,8 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
         promotionGoodsPage.setTotal(page.getTotal());
         promotionGoodsPage.setPages(page.getPages());
         List<PromotionGoods> records = page.getRecords();
-        for (PromotionGoods record : records) {
-            PromotionGoodsDTO promotionGoodsDTO = this.wrapperPromotionGoodsDTO(record);
+        for (PromotionGoods promotionGoods : records) {
+            PromotionGoodsDTO promotionGoodsDTO = this.wrapperPromotionGoodsDTO(promotionGoods);
             promotionGoodsList.add(promotionGoodsDTO);
         }
         promotionGoodsPage.setRecords(promotionGoodsList);
@@ -412,9 +414,9 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
         searchParams.setOrder(pageVo.getOrder());
         IPage<GoodsSku> goodsSkuByPage = goodsSkuService.getGoodsSkuByPage(searchParams);
         //将查询到的商品sku转换为促销商品
-        for (GoodsSku record : goodsSkuByPage.getRecords()) {
-            PromotionGoodsDTO promotionGoods = new PromotionGoodsDTO(record);
-            promotionGoods.setGoodsImage(record.getThumbnail());
+        for (GoodsSku goodsSku : goodsSkuByPage.getRecords()) {
+            PromotionGoodsDTO promotionGoods = new PromotionGoodsDTO(goodsSku);
+            promotionGoods.setGoodsImage(goodsSku.getThumbnail());
             promotionGoods.setStartTime(promotion.getStartTime());
             promotionGoods.setEndTime(promotion.getEndTime());
             promotionGoods.setTitle(promotion.getPromotionName());

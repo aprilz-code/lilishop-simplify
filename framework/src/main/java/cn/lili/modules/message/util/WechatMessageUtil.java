@@ -76,6 +76,9 @@ public class WechatMessageUtil {
     public void wechatMessage(String sn) {
 
         Order order = orderService.getBySn(sn);
+        if (order == null) {
+            throw new ServiceException("订单" + sn + "不存在，发送微信公众号消息错误");
+        }
         //获取微信消息
         LambdaQueryWrapper<WechatMessage> wechatMessageQueryWrapper = new LambdaQueryWrapper();
         wechatMessageQueryWrapper.eq(WechatMessage::getOrderStatus, order.getOrderStatus());
@@ -86,7 +89,7 @@ public class WechatMessageUtil {
 
         QueryWrapper<Connect> queryWrapper = new QueryWrapper();
         queryWrapper.eq("user_id", order.getMemberId());
-        queryWrapper.eq("union_type", ConnectEnum.WECHAT_OPEN_ID.name());
+        queryWrapper.eq("union_type", ConnectEnum.WECHAT.name());
 
         Connect connect = connectService.getOne(queryWrapper);
         if (connect == null) {
@@ -130,8 +133,11 @@ public class WechatMessageUtil {
      */
     public void wechatMpMessage(String sn) {
 
-        log.error("发送消息订阅");
+        log.info("发送消息订阅");
         Order order = orderService.getBySn(sn);
+        if (order == null) {
+            throw new ServiceException("订单" + sn + "不存在，发送订阅消息错误");
+        }
         //获取微信消息
         LambdaQueryWrapper<WechatMPMessage> wechatMPMessageQueryWrapper = new LambdaQueryWrapper();
         wechatMPMessageQueryWrapper.eq(WechatMPMessage::getOrderStatus, order.getOrderStatus());

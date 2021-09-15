@@ -4,7 +4,6 @@ import cn.lili.modules.payment.kit.RefundSupport;
 import cn.lili.modules.payment.kit.enums.PaymentMethodEnum;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;

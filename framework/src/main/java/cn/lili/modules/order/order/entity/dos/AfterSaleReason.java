@@ -6,19 +6,15 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
 /**
  * 售后原因
  *
  * @author Bulbasaur
- * @since: 2021/7/9 1:39 上午
+ * @since 2021/7/9 1:39 上午
  */
 @Data
-@Entity
-@Table(name = "li_after_sale_reason")
 @TableName("li_after_sale_reason")
 @ApiModel(value = "售后原因")
 public class AfterSaleReason extends BaseEntity {

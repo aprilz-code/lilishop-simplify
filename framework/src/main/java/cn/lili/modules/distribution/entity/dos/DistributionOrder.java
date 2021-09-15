@@ -2,6 +2,7 @@ package cn.lili.modules.distribution.entity.dos;
 
 import cn.lili.modules.distribution.entity.enums.DistributionOrderStatusEnum;
 import cn.lili.modules.order.order.entity.dos.StoreFlow;
+import cn.lili.mybatis.BaseIdEntity;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -14,10 +15,6 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.format.annotation.DateTimeFormat;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
 import java.util.Date;
 
 /**
@@ -27,25 +24,21 @@ import java.util.Date;
  * @since 2020-03-14 23:04:56
  */
 @Data
-@Entity
 @ApiModel(value = "分销订单")
 @TableName("li_distribution_order")
-@Table(name = "li_distribution_order")
 @NoArgsConstructor
-public class DistributionOrder {
+public class DistributionOrder extends BaseIdEntity {
 
     private static final long serialVersionUID = 501799944909496507L;
 
-    @Id
     @TableId
     @TableField
-    @Column(columnDefinition = "bigint(20)")
     @ApiModelProperty(value = "唯一标识", hidden = true)
     private String id;
 
     @CreatedDate
     @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
-  @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @TableField(fill = FieldFill.INSERT)
     @ApiModelProperty(value = "创建时间", hidden = true)
     private Date createTime;
@@ -84,28 +77,27 @@ public class DistributionOrder {
     @ApiModelProperty(value = "货品ID")
     private String skuId;
     @ApiModelProperty(value = "规格")
-    @Column(columnDefinition = "TEXT")
     private String specs;
     @ApiModelProperty(value = "图片")
     private String image;
     @ApiModelProperty(value = "商品数量")
     private Integer num;
 
-    public DistributionOrder(StoreFlow storeFlow){
-        distributionOrderStatus=DistributionOrderStatusEnum.WAIT_BILL.name();
-        memberId=storeFlow.getMemberId();
-        memberName=storeFlow.getMemberName();
-        rebate=storeFlow.getDistributionRebate();
-        storeId=storeFlow.getStoreId();
-        storeName=storeFlow.getStoreName();
-        orderSn=storeFlow.getOrderSn();
-        orderItemSn=storeFlow.getOrderItemSn();
-        goodsId=storeFlow.getGoodsId();
-        goodsName=storeFlow.getGoodsName();
-        skuId=storeFlow.getSkuId();
-        specs=storeFlow.getSpecs();
-        image=storeFlow.getImage();
-        num= storeFlow.getNum();
+    public DistributionOrder(StoreFlow storeFlow) {
+        distributionOrderStatus = DistributionOrderStatusEnum.WAIT_BILL.name();
+        memberId = storeFlow.getMemberId();
+        memberName = storeFlow.getMemberName();
+        rebate = storeFlow.getDistributionRebate();
+        storeId = storeFlow.getStoreId();
+        storeName = storeFlow.getStoreName();
+        orderSn = storeFlow.getOrderSn();
+        orderItemSn = storeFlow.getOrderItemSn();
+        goodsId = storeFlow.getGoodsId();
+        goodsName = storeFlow.getGoodsName();
+        skuId = storeFlow.getSkuId();
+        specs = storeFlow.getSpecs();
+        image = storeFlow.getImage();
+        num = storeFlow.getNum();
     }
 
 }

@@ -58,6 +58,7 @@ public interface GoodsService extends IService<Goods> {
      */
     GoodsVO getGoodsVO(String goodsId);
 
+
     /**
      * 商品查询
      *

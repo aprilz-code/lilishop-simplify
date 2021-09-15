@@ -12,6 +12,7 @@ import cn.lili.modules.store.entity.dto.StoreSettingDTO;
 import cn.lili.modules.store.entity.vos.StoreBasicInfoVO;
 import cn.lili.modules.store.entity.vos.StoreDetailVO;
 import cn.lili.modules.store.entity.vos.StoreManagementCategoryVO;
+import cn.lili.modules.store.entity.vos.StoreOtherVO;
 import cn.lili.modules.store.mapper.StoreDetailMapper;
 import cn.lili.modules.store.service.StoreDetailService;
 import cn.lili.modules.store.service.StoreService;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 店铺详细业务层实现
@@ -66,7 +68,7 @@ public class StoreDetailServiceImpl extends ServiceImpl<StoreDetailMapper, Store
 
     @Override
     public Boolean editStoreSetting(StoreSettingDTO storeSettingDTO) {
-        AuthUser tokenUser = UserContext.getCurrentUser();
+        AuthUser tokenUser = Objects.requireNonNull(UserContext.getCurrentUser());
         //修改店铺
         Store store = storeService.getById(tokenUser.getStoreId());
         BeanUtil.copyProperties(storeSettingDTO, store);
@@ -80,7 +82,8 @@ public class StoreDetailServiceImpl extends ServiceImpl<StoreDetailMapper, Store
 
     @Override
     public StoreAfterSaleAddressDTO getStoreAfterSaleAddressDTO() {
-        return this.baseMapper.getStoreAfterSaleAddressDTO(UserContext.getCurrentUser().getStoreId());
+        String storeId = Objects.requireNonNull(UserContext.getCurrentUser()).getStoreId();
+        return this.baseMapper.getStoreAfterSaleAddressDTO(storeId);
     }
 
     @Override
@@ -94,21 +97,23 @@ public class StoreDetailServiceImpl extends ServiceImpl<StoreDetailMapper, Store
 
     @Override
     public boolean editStoreAfterSaleAddressDTO(StoreAfterSaleAddressDTO storeAfterSaleAddressDTO) {
+        String storeId = Objects.requireNonNull(UserContext.getCurrentUser()).getStoreId();
         LambdaUpdateWrapper<StoreDetail> lambdaUpdateWrapper = Wrappers.lambdaUpdate();
         lambdaUpdateWrapper.set(StoreDetail::getSalesConsigneeName, storeAfterSaleAddressDTO.getSalesConsigneeName());
         lambdaUpdateWrapper.set(StoreDetail::getSalesConsigneeAddressId, storeAfterSaleAddressDTO.getSalesConsigneeAddressId());
         lambdaUpdateWrapper.set(StoreDetail::getSalesConsigneeAddressPath, storeAfterSaleAddressDTO.getSalesConsigneeAddressPath());
         lambdaUpdateWrapper.set(StoreDetail::getSalesConsigneeDetail, storeAfterSaleAddressDTO.getSalesConsigneeDetail());
         lambdaUpdateWrapper.set(StoreDetail::getSalesConsigneeMobile, storeAfterSaleAddressDTO.getSalesConsigneeMobile());
-        lambdaUpdateWrapper.eq(StoreDetail::getStoreId, UserContext.getCurrentUser().getStoreId());
+        lambdaUpdateWrapper.eq(StoreDetail::getStoreId, storeId);
         return this.update(lambdaUpdateWrapper);
     }
 
     @Override
     public boolean updateStockWarning(Integer stockWarning) {
+        String storeId = Objects.requireNonNull(UserContext.getCurrentUser()).getStoreId();
         LambdaUpdateWrapper<StoreDetail> lambdaUpdateWrapper = Wrappers.lambdaUpdate();
         lambdaUpdateWrapper.set(StoreDetail::getStockWarning, stockWarning);
-        lambdaUpdateWrapper.eq(StoreDetail::getStoreId, UserContext.getCurrentUser().getStoreId());
+        lambdaUpdateWrapper.eq(StoreDetail::getStoreId, storeId);
         return this.update(lambdaUpdateWrapper);
     }
 
@@ -118,13 +123,13 @@ public class StoreDetailServiceImpl extends ServiceImpl<StoreDetailMapper, Store
         //获取顶部分类列表
         List<Category> categoryList = categoryService.firstCategory();
         //获取店铺信息
-        StoreDetail storeDetail = this.getOne(new LambdaQueryWrapper<StoreDetail>().eq(StoreDetail::getStoreId,storeId));
+        StoreDetail storeDetail = this.getOne(new LambdaQueryWrapper<StoreDetail>().eq(StoreDetail::getStoreId, storeId));
         //获取店铺分类
         String[] storeCategoryList = storeDetail.getGoodsManagementCategory().split(",");
         List<StoreManagementCategoryVO> list = new ArrayList<>();
         for (Category category : categoryList) {
             StoreManagementCategoryVO storeManagementCategoryVO = new StoreManagementCategoryVO(category);
-            for (String storeCategory:storeCategoryList) {
+            for (String storeCategory : storeCategoryList) {
                 if (storeCategory.equals(category.getId())) {
                     storeManagementCategoryVO.setSelected(true);
                 }
@@ -132,6 +137,11 @@ public class StoreDetailServiceImpl extends ServiceImpl<StoreDetailMapper, Store
             list.add(storeManagementCategoryVO);
         }
         return list;
+    }
+
+    @Override
+    public StoreOtherVO getStoreOtherVO(String storeId) {
+        return this.baseMapper.getLicencePhoto(storeId);
     }
 
 }

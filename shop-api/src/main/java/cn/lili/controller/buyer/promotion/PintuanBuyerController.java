@@ -1,12 +1,12 @@
 package cn.lili.controller.buyer.promotion;
 
 import cn.hutool.core.date.DateUtil;
+import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultUtil;
 import cn.lili.common.vo.PageVO;
 import cn.lili.common.vo.ResultMessage;
 import cn.lili.modules.promotion.entity.dto.PromotionGoodsDTO;
 import cn.lili.modules.promotion.entity.enums.PromotionStatusEnum;
-import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.modules.promotion.entity.vos.PintuanMemberVO;
 import cn.lili.modules.promotion.entity.vos.PintuanShareVO;
 import cn.lili.modules.promotion.entity.vos.PromotionGoodsSearchParams;

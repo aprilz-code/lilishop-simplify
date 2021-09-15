@@ -9,8 +9,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
 import javax.validation.constraints.NotEmpty;
 
 /**
@@ -21,8 +19,6 @@ import javax.validation.constraints.NotEmpty;
  * @since 2020/12/10 17:42
  */
 @Data
-@Entity
-@Table(name = "li_article_category")
 @TableName("li_article_category")
 @ApiModel(value = "文章分类")
 @NoArgsConstructor
@@ -51,4 +47,17 @@ public class ArticleCategory extends BaseEntity {
     @ApiModelProperty(value = "类型")
     private String type;
 
+    public Integer getSort() {
+        if (sort == null) {
+            return 0;
+        }
+        return sort;
+    }
+
+    public Integer getLevel() {
+        if (level == null) {
+            return 1;
+        }
+        return level;
+    }
 }

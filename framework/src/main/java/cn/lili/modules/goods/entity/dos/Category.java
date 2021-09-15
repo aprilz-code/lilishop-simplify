@@ -8,8 +8,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -22,8 +20,6 @@ import java.util.Date;
  * @since 2020-02-18 15:18:56
  */
 @Data
-@Entity
-@Table(name = "li_category")
 @TableName("li_category")
 @ApiModel(value = "商品分类")
 @AllArgsConstructor
@@ -52,7 +48,6 @@ public class Category extends BaseEntity {
     @ApiModelProperty(value = "佣金比例")
     private Double commissionRate;
 
-    @NotEmpty(message = "分类图标不能为空")
     @ApiModelProperty(value = "分类图标")
     private String image;
 

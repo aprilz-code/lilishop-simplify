@@ -35,15 +35,6 @@ public interface PromotionGoodsService extends IService<PromotionGoods> {
     }
 
     /**
-     * 根据活动获取商品
-     *
-     * @param promotionId 促销活动id
-     * @param skuId       商品id
-     * @return 促销商品信息
-     */
-    PromotionGoods findByPromotion(String promotionId, String skuId);
-
-    /**
      * 删除指定促销类型的促销商品
      *
      * @param promotionGoodsList 促销商品列表
@@ -59,13 +50,6 @@ public interface PromotionGoodsService extends IService<PromotionGoods> {
     void updatePromotion(CartSkuVO cartSkuVO);
 
     /**
-     * 获取购物车商品的促销活动
-     *
-     * @param cartSkuVO 购物车中的产品
-     */
-    void getCartSkuPromotion(CartSkuVO cartSkuVO);
-
-    /**
      * 获取某sku当日所有活动
      *
      * @param skuId 商品skuId
@@ -76,10 +60,10 @@ public interface PromotionGoodsService extends IService<PromotionGoods> {
     /**
      * 分页获取促销商品信息
      *
-     * @param goodsId 商品skuId
+     * @param skuId 商品skuId
      * @return 某商品的促销信息
      */
-    List<PromotionGoods> getPromotionGoods(String goodsId);
+    List<PromotionGoods> getPromotionGoods(String skuId);
 
     /**
      * 分页获取促销商品信息
@@ -123,6 +107,16 @@ public interface PromotionGoodsService extends IService<PromotionGoods> {
     Integer getPromotionGoodsStock(PromotionTypeEnum typeEnum, String promotionId, String skuId);
 
     /**
+     * 批量获取促销活动商品库存
+     *
+     * @param typeEnum    促销商品类型
+     * @param promotionId 促销活动id
+     * @param skuId       批量商品skuId
+     * @return 促销活动商品库存
+     */
+    List<Integer> getPromotionGoodsStock(PromotionTypeEnum typeEnum, String promotionId, List<String> skuId);
+
+    /**
      * 根据条件获取促销活动商品详情
      *
      * @param typeEnum    促销类型
@@ -131,6 +125,16 @@ public interface PromotionGoodsService extends IService<PromotionGoods> {
      * @return 促销活动商品详情
      */
     PromotionGoods getPromotionGoods(PromotionTypeEnum typeEnum, String promotionId, String skuId);
+
+    /**
+     * 批量获取促销商品信息
+     *
+     * @param typeEnum    促销类型
+     * @param promotionId 促销活动id
+     * @param skuId       商品skuId
+     * @return 促销活动商品详情
+     */
+    List<PromotionGoods> getPromotionGoods(PromotionTypeEnum typeEnum, String promotionId, List<String> skuId);
 
     /**
      * 更新促销活动商品库存

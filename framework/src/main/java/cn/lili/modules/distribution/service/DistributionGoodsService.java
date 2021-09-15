@@ -6,6 +6,8 @@ import cn.lili.modules.distribution.entity.vos.DistributionGoodsVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.util.List;
+
 
 /**
  * 分销商品业务层
@@ -40,12 +42,21 @@ public interface DistributionGoodsService extends IService<DistributionGoods> {
     DistributionGoods distributionGoodsVOBySkuId(String skuId);
 
     /**
+     * 批量获取分销商品
+     *
+     * @param skuIds sku id集合
+     * @return 分销商品
+     */
+    List<DistributionGoods> distributionGoods(List<String> skuIds);
+
+    /**
      * 选择分销商品
      *
      * @param skuId      SKU ID
      * @param commission 佣金
+     * @param storeId 店铺id
      * @return
      */
-    DistributionGoods checked(String skuId, Double commission);
+    DistributionGoods checked(String skuId, Double commission, String storeId);
 
 }

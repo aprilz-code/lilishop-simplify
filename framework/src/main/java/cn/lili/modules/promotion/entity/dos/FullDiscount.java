@@ -6,8 +6,6 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
 import javax.validation.constraints.DecimalMax;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
@@ -19,8 +17,6 @@ import javax.validation.constraints.NotNull;
  * @since 2020-03-19 10:44 上午
  */
 @Data
-@Entity
-@Table(name = "li_full_discount")
 @TableName("li_full_discount")
 @ApiModel(value = "满优惠活动")
 public class FullDiscount extends BasePromotion {
@@ -72,4 +68,46 @@ public class FullDiscount extends BasePromotion {
     @ApiModelProperty(value = "活动说明")
     private String description;
 
+
+    public Boolean getIsFullMinus() {
+        if (isFullMinus == null) {
+            return false;
+        }
+        return isFullMinus;
+    }
+
+    public Boolean getIsFullRate() {
+        if (isFullRate == null) {
+            return false;
+        }
+        return isFullRate;
+    }
+
+    public Boolean getIsPoint() {
+        if (isPoint == null) {
+            return false;
+        }
+        return isPoint;
+    }
+
+    public Boolean getIsFreeFreight() {
+        if (isFreeFreight == null) {
+            return false;
+        }
+        return isFreeFreight;
+    }
+
+    public Boolean getIsGift() {
+        if (isGift == null) {
+            return false;
+        }
+        return isGift;
+    }
+
+    public Boolean getIsCoupon() {
+        if (isCoupon == null) {
+            return false;
+        }
+        return isCoupon;
+    }
 }

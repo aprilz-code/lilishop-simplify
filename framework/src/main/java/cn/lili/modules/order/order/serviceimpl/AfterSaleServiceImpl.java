@@ -1,21 +1,18 @@
 package cn.lili.modules.order.order.serviceimpl;
 
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.NumberUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
-import cn.lili.modules.system.utils.OperationalJudgment;
-import cn.lili.modules.system.aspect.annotation.SystemLogPoint;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.mybatis.util.PageUtil;
-import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
-import cn.lili.rocketmq.tags.AfterSaleTagsEnum;
+import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
-import cn.lili.common.utils.*;
+import cn.lili.common.utils.BeanUtil;
+import cn.lili.common.utils.CurrencyUtil;
+import cn.lili.common.utils.SnowFlake;
 import cn.lili.common.vo.PageVO;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.modules.order.order.aop.AfterSaleLogPoint;
 import cn.lili.modules.order.order.entity.dos.AfterSale;
 import cn.lili.modules.order.order.entity.dos.Order;
@@ -40,11 +37,15 @@ import cn.lili.modules.payment.kit.enums.PaymentMethodEnum;
 import cn.lili.modules.statistics.model.dto.StatisticsQueryParam;
 import cn.lili.modules.statistics.util.StatisticsDateUtil;
 import cn.lili.modules.store.entity.dto.StoreAfterSaleAddressDTO;
-import cn.lili.modules.store.entity.enums.StoreStatusEnum;
 import cn.lili.modules.store.service.StoreDetailService;
+import cn.lili.modules.system.aspect.annotation.SystemLogPoint;
 import cn.lili.modules.system.entity.dos.Logistics;
 import cn.lili.modules.system.entity.vo.Traces;
 import cn.lili.modules.system.service.LogisticsService;
+import cn.lili.modules.system.utils.OperationalJudgment;
+import cn.lili.mybatis.util.PageUtil;
+import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
+import cn.lili.rocketmq.tags.AfterSaleTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -58,6 +59,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 售后业务层实现
@@ -121,7 +123,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
     }
 
     @Override
-    public AfterSaleApplyVO getAfterSaleDTO(String sn) {
+    public AfterSaleApplyVO getAfterSaleVO(String sn) {
 
         AfterSaleApplyVO afterSaleApplyVO = new AfterSaleApplyVO();
 
@@ -189,7 +191,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
         if (!afterSale.getServiceStatus().equals(AfterSaleStatusEnum.APPLY.name())) {
             throw new ServiceException(ResultCode.AFTER_SALES_DOUBLE_ERROR);
         }
-        //判断退款金额与付款金额是否正确,退款金额不能小于付款金额
+        //判断退款金额与付款金额是否正确,退款金额不能大于付款金额
         if (NumberUtil.compare(afterSale.getFlowPrice(), actualRefundPrice) == -1) {
             throw new ServiceException(ResultCode.AFTER_SALES_PRICE_ERROR);
         }
@@ -200,7 +202,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
         //如果售后类型为：退款，审核状态为已通过并且退款方式为原路退回，售后单状态为已完成。
         //如果售后类型为：退款，审核状态已通过并且退款方式为线下退回，售后单状态为待退款。
         //如果售后类型不为退款，售后单状态为：已通过。
-        AfterSaleStatusEnum afterSaleStatusEnum = null;
+        AfterSaleStatusEnum afterSaleStatusEnum;
         if (serviceStatus.equals(AfterSaleStatusEnum.PASS.name())) {
             if (afterSale.getServiceType().equals(AfterSaleTypeEnum.RETURN_MONEY.name())) {
                 if (afterSale.getRefundWay().equals(AfterSaleRefundWayEnum.ORIGINAL.name())) {
@@ -272,9 +274,9 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
 
     @Override
     @AfterSaleLogPoint(sn = "#afterSaleSn", description = "'售后-商家收货:单号['+#afterSaleSn+']，物流单号为['+#logisticsNo+']" +
-            ",处理结果['+serviceStatus='PASS'?+'商家收货':'商家拒收'+']'")
+            ",处理结果['+serviceStatus='PASS'?'商家收货':'商家拒收'+']'")
     @SystemLogPoint(description = "售后-商家收货", customerLog = "'售后-商家收货:单号['+#afterSaleSn+']，物流单号为['+#logisticsNo+']" +
-            ",处理结果['+serviceStatus='PASS'?+'商家收货':'商家拒收'+']'")
+            ",处理结果['+serviceStatus='PASS'?'商家收货':'商家拒收'+']'")
     public AfterSale storeConfirm(String afterSaleSn, String serviceStatus, String remark) {
         //根据售后单号获取售后单
         AfterSale afterSale = OperationalJudgment.judgment(this.getBySn(afterSaleSn));
@@ -283,7 +285,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
         if (!afterSale.getServiceStatus().equals(AfterSaleStatusEnum.BUYER_RETURN.name())) {
             throw new ServiceException(ResultCode.AFTER_STATUS_ERROR);
         }
-        AfterSaleStatusEnum afterSaleStatusEnum = null;
+        AfterSaleStatusEnum afterSaleStatusEnum;
         String pass = "PASS";
         //判断审核状态
         //在线支付 则直接进行退款
@@ -358,17 +360,18 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
 
     @Override
     public Integer applyNum(String serviceType) {
+        AuthUser authUser = Objects.requireNonNull(UserContext.getCurrentUser());
         LambdaQueryWrapper<AfterSale> queryWrapper = Wrappers.lambdaQuery();
-        queryWrapper.eq(AfterSale::getServiceStatus, StoreStatusEnum.APPLYING.name());
-        queryWrapper.eq(StringUtils.isNotEmpty(serviceType), AfterSale::getServiceType, serviceType);
-        queryWrapper.eq(StringUtils.equals(UserContext.getCurrentUser().getRole().name(), UserEnums.STORE.name()),
-                AfterSale::getStoreId, UserContext.getCurrentUser().getStoreId());
+        queryWrapper.eq(AfterSale::getServiceStatus, AfterSaleStatusEnum.APPLY.name());
+        queryWrapper.eq(CharSequenceUtil.isNotEmpty(serviceType), AfterSale::getServiceType, serviceType);
+        queryWrapper.eq(CharSequenceUtil.equals(authUser.getRole().name(), UserEnums.STORE.name()),
+                AfterSale::getStoreId, authUser.getStoreId());
         return this.count(queryWrapper);
     }
 
     @Override
     public StoreAfterSaleAddressDTO getStoreAfterSaleAddressDTO(String sn) {
-        return storeDetailService.getStoreAfterSaleAddressDTO(this.getBySn(sn).getStoreId());
+        return storeDetailService.getStoreAfterSaleAddressDTO(OperationalJudgment.judgment(this.getBySn(sn)).getStoreId());
     }
 
     @Override
@@ -377,7 +380,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
         LambdaQueryWrapper<AfterSale> queryWrapper = new LambdaQueryWrapper<>();
         Date[] dates = StatisticsDateUtil.getDateArray(statisticsQueryParam);
         queryWrapper.between(AfterSale::getCreateTime, dates[0], dates[1]);
-        queryWrapper.eq(StringUtils.isNotEmpty(statisticsQueryParam.getStoreId()), AfterSale::getStoreId, statisticsQueryParam.getStoreId());
+        queryWrapper.eq(CharSequenceUtil.isNotEmpty(statisticsQueryParam.getStoreId()), AfterSale::getStoreId, statisticsQueryParam.getStoreId());
 
         return this.page(PageUtil.initPage(pageVO), queryWrapper);
     }
@@ -390,7 +393,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
      */
     private AfterSale addAfterSale(AfterSaleDTO afterSaleDTO) {
         //写入其他属性
-        AuthUser tokenUser = UserContext.getCurrentUser();
+        AuthUser tokenUser = Objects.requireNonNull(UserContext.getCurrentUser());
 
         AfterSale afterSale = new AfterSale();
         BeanUtil.copyProperties(afterSaleDTO, afterSale);
@@ -429,8 +432,15 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
         if (afterSaleDTO.getImages() != null) {
             afterSale.setAfterSaleImage(afterSaleDTO.getImages());
         }
-        //计算退回金额
-        afterSale.setApplyRefundPrice(CurrencyUtil.mul(orderItem.getUnitPrice(), afterSale.getNum()));
+
+        if (afterSale.getNum().equals(orderItem.getNum())) {
+            //计算退回金额
+            afterSale.setApplyRefundPrice(orderItem.getFlowPrice());
+        } else {
+            //单价计算
+            double utilPrice = CurrencyUtil.div(orderItem.getPriceDetailDTO().getFlowPrice(), orderItem.getNum());
+            afterSale.setApplyRefundPrice(CurrencyUtil.mul(afterSale.getNum(), utilPrice));
+        }
         //添加售后
         this.save(afterSale);
         //发送售后消息
@@ -448,7 +458,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
     private void checkAfterSaleType(AfterSaleDTO afterSaleDTO) {
 
         //判断数据是否为空
-        if (null == afterSaleDTO || StringUtils.isEmpty(afterSaleDTO.getOrderItemSn())) {
+        if (null == afterSaleDTO || CharSequenceUtil.isEmpty(afterSaleDTO.getOrderItemSn())) {
             throw new ServiceException(ResultCode.ORDER_NOT_EXIST);
         }
 
@@ -473,7 +483,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
                 break;
             case RETURN_GOODS:
                 //是否为有效状态
-                boolean availableStatus = StrUtil.equalsAny(order.getOrderStatus(), OrderStatusEnum.DELIVERED.name(), OrderStatusEnum.COMPLETED.name());
+                boolean availableStatus = CharSequenceUtil.equalsAny(order.getOrderStatus(), OrderStatusEnum.DELIVERED.name(), OrderStatusEnum.COMPLETED.name());
                 if (!PayStatusEnum.PAID.name().equals(order.getPayStatus()) && availableStatus) {
                     throw new ServiceException(ResultCode.AFTER_SALES_BAN);
                 }
@@ -487,14 +497,14 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
     /**
      * 检测售后-退款参数
      *
-     * @param afterSaleDTO
+     * @param afterSaleDTO 售后DTO
      */
     private void checkAfterSaleReturnMoneyParam(AfterSaleDTO afterSaleDTO) {
         //如果为线下支付银行信息不能为空
         if (AfterSaleRefundWayEnum.OFFLINE.name().equals(afterSaleDTO.getRefundWay())) {
-            boolean emptyBankParam = StringUtils.isEmpty(afterSaleDTO.getBankDepositName())
-                    || StringUtils.isEmpty(afterSaleDTO.getBankAccountName())
-                    || StringUtils.isEmpty(afterSaleDTO.getBankAccountNumber());
+            boolean emptyBankParam = CharSequenceUtil.isEmpty(afterSaleDTO.getBankDepositName())
+                    || CharSequenceUtil.isEmpty(afterSaleDTO.getBankAccountName())
+                    || CharSequenceUtil.isEmpty(afterSaleDTO.getBankAccountNumber());
             if (emptyBankParam) {
                 throw new ServiceException(ResultCode.RETURN_MONEY_OFFLINE_BANK_ERROR);
             }

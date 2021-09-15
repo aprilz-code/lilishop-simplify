@@ -3,6 +3,7 @@ package cn.lili.modules.order.cart.render.impl;
 import cn.lili.common.utils.SnowFlake;
 import cn.lili.modules.order.cart.entity.dto.StoreRemarkDTO;
 import cn.lili.modules.order.cart.entity.dto.TradeDTO;
+import cn.lili.modules.order.cart.entity.enums.RenderStepEnums;
 import cn.lili.modules.order.cart.render.CartRenderStep;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -13,9 +14,13 @@ import org.springframework.stereotype.Service;
  * @author Chopper
  * @since 2020-07-02 14:47
  */
-@Order(7)
 @Service
 public class CartSnRender implements CartRenderStep {
+
+    @Override
+    public RenderStepEnums step() {
+        return RenderStepEnums.CART_SN;
+    }
 
     @Override
     public void render(TradeDTO tradeDTO) {

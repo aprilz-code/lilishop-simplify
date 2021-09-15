@@ -3,16 +3,16 @@ package cn.lili.controller.common;
 import cn.hutool.core.util.StrUtil;
 import cn.lili.cache.Cache;
 import cn.lili.common.enums.ResultCode;
+import cn.lili.common.enums.ResultUtil;
 import cn.lili.common.exception.ServiceException;
+import cn.lili.common.properties.SystemSettingProperties;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.utils.Base64DecodeMultipartFile;
 import cn.lili.common.utils.CommonUtil;
-import cn.lili.common.enums.ResultUtil;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.ResultMessage;
-import cn.lili.common.properties.SystemSettingProperties;
 import cn.lili.modules.file.entity.File;
 import cn.lili.modules.file.plugin.FileManagerPlugin;
 import cn.lili.modules.file.service.FileService;
@@ -103,12 +103,5 @@ public class UploadController {
             throw new ServiceException(ResultCode.OSS_EXCEPTION_ERROR);
         }
         return ResultUtil.data(result);
-    }
-
-
-    @ApiOperation(value = "返回licences")
-    @PostMapping(value = "/licences")
-    public ResultMessage<Object> licences() {
-        return ResultUtil.data(systemSettingProperties.getLicences());
     }
 }

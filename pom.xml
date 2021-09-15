@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.3.4.RELEASE</version>
+        <version>2.4.10</version>
         <relativePath/>
     </parent>
 
@@ -18,7 +18,7 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <revision>4.2.0</revision>
+        <revision>4.2.2</revision>
         <docker-registry>registry.cn-beijing.aliyuncs.com/lili-images</docker-registry>
         <images-version>0.0.1</images-version>
         <swagger-bootstrap-ui-version>1.9.6</swagger-bootstrap-ui-version>

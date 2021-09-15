@@ -1,7 +1,7 @@
 package cn.lili.controller.buyer.passport.connect;
 
-import cn.lili.common.security.token.Token;
 import cn.lili.common.enums.ResultUtil;
+import cn.lili.common.security.token.Token;
 import cn.lili.common.vo.ResultMessage;
 import cn.lili.modules.connect.entity.dto.WechatMPLoginParams;
 import cn.lili.modules.connect.service.ConnectService;

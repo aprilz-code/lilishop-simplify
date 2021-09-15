@@ -18,12 +18,12 @@ import cn.lili.modules.promotion.service.FullDiscountService;
 import cn.lili.modules.promotion.service.PromotionGoodsService;
 import cn.lili.modules.promotion.tools.PromotionTools;
 import cn.lili.mybatis.util.PageUtil;
-import cn.lili.trigger.enums.DelayTypeEnums;
-import cn.lili.trigger.interfaces.TimeTrigger;
-import cn.lili.trigger.message.PromotionMessage;
-import cn.lili.trigger.model.TimeExecuteConstant;
-import cn.lili.trigger.model.TimeTriggerMsg;
-import cn.lili.trigger.util.DelayQueueTools;
+import cn.lili.consumer.trigger.enums.DelayTypeEnums;
+import cn.lili.consumer.trigger.interfaces.TimeTrigger;
+import cn.lili.consumer.trigger.message.PromotionMessage;
+import cn.lili.consumer.trigger.model.TimeExecuteConstant;
+import cn.lili.consumer.trigger.model.TimeTriggerMsg;
+import cn.lili.consumer.trigger.util.DelayQueueTools;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -273,10 +273,14 @@ public class FullDiscountServiceImpl extends ServiceImpl<FullDiscountMapper, Ful
             if (noGiftSelected) {
                 throw new ServiceException(ResultCode.FULL_DISCOUNT_GIFT_ERROR);
             }
+        } else {
+            fullDiscountVO.setGiftId(null);
         }
         //如果优惠方式是赠优惠券
         if (Boolean.TRUE.equals(fullDiscountVO.getIsCoupon())) {
-            this.checkCoupon(fullDiscountVO.getCouponId(), fullDiscountVO.getEndTime().getTime());
+            this.checkCoupon(fullDiscountVO.getCouponId());
+        } else {
+            fullDiscountVO.setCouponId(null);
         }
         //如果优惠方式是折扣
         if (Boolean.TRUE.equals(fullDiscountVO.getIsFullRate())) {
@@ -307,17 +311,16 @@ public class FullDiscountServiceImpl extends ServiceImpl<FullDiscountMapper, Ful
      * 检查优惠券信息
      *
      * @param couponId 优惠券编号
-     * @param endTime  活动结束时间
      */
-    private void checkCoupon(String couponId, long endTime) {
+    private void checkCoupon(String couponId) {
         //是否没有选择优惠券
         boolean noCouponSelected = couponId == null;
         if (noCouponSelected) {
             throw new ServiceException(ResultCode.COUPON_NOT_EXIST);
         }
         Coupon coupon = this.couponService.getById(couponId);
-        if (coupon.getEndTime().getTime() < endTime) {
-            throw new ServiceException(ResultCode.FULL_DISCOUNT_COUPON_TIME_ERROR);
+        if (coupon == null) {
+            throw new ServiceException(ResultCode.COUPON_NOT_EXIST);
         }
     }
 
@@ -364,8 +367,8 @@ public class FullDiscountServiceImpl extends ServiceImpl<FullDiscountMapper, Ful
         Query query = new Query();
         Date now = new Date();
         query.addCriteria(Criteria.where(PROMOTION_STATUS_COLUMN).is(PromotionStatusEnum.START.name()));
-        query.addCriteria(Criteria.where("startTime").lt(now));
-        query.addCriteria(Criteria.where("endTime").gt(now));
+        query.addCriteria(Criteria.where("startTime").lte(now));
+        query.addCriteria(Criteria.where("endTime").gte(now));
         return query;
     }
 }

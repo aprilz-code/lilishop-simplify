@@ -23,7 +23,7 @@ import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
+import org.springframework.data.elasticsearch.core.SearchPage;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -99,9 +99,9 @@ public class GoodsBuyerController {
 
     @ApiOperation(value = "从ES中获取商品信息")
     @GetMapping("/es")
-    public ResultMessage<Page<EsGoodsIndex>> getGoodsByPageFromEs(EsGoodsSearchDTO goodsSearchParams, PageVO pageVO) {
+    public ResultMessage<SearchPage<EsGoodsIndex>> getGoodsByPageFromEs(EsGoodsSearchDTO goodsSearchParams, PageVO pageVO) {
         pageVO.setNotConvert(true);
-        Page<EsGoodsIndex> esGoodsIndices = goodsSearchService.searchGoods(goodsSearchParams, pageVO);
+        SearchPage<EsGoodsIndex> esGoodsIndices = goodsSearchService.searchGoods(goodsSearchParams, pageVO);
         return ResultUtil.data(esGoodsIndices);
     }
 
@@ -115,8 +115,8 @@ public class GoodsBuyerController {
 
     @ApiOperation(value = "获取搜索热词")
     @GetMapping("/hot-words")
-    public ResultMessage<List<String>> getGoodsHotWords(Integer start, Integer end) {
-        List<String> hotWords = goodsSearchService.getHotWords(start, end);
+    public ResultMessage<List<String>> getGoodsHotWords(Integer count) {
+        List<String> hotWords = goodsSearchService.getHotWords(count);
         return ResultUtil.data(hotWords);
     }
 

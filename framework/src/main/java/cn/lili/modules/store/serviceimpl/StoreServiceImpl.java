@@ -4,9 +4,9 @@ import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.BeanUtil;
-import cn.lili.mybatis.util.PageUtil;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.goods.entity.dos.Goods;
@@ -28,6 +28,7 @@ import cn.lili.modules.store.entity.vos.StoreVO;
 import cn.lili.modules.store.mapper.StoreMapper;
 import cn.lili.modules.store.service.StoreDetailService;
 import cn.lili.modules.store.service.StoreService;
+import cn.lili.mybatis.util.PageUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -88,8 +89,9 @@ public class StoreServiceImpl extends ServiceImpl<StoreMapper, Store> implements
 
     @Override
     public StoreVO getStoreDetail() {
-        StoreVO storeVO = this.baseMapper.getStoreDetail(UserContext.getCurrentUser().getStoreId());
-        storeVO.setNickName(UserContext.getCurrentUser().getNickName());
+        AuthUser currentUser = UserContext.getCurrentUser();
+        StoreVO storeVO = this.baseMapper.getStoreDetail(currentUser.getStoreId());
+        storeVO.setNickName(currentUser.getNickName());
         return storeVO;
     }
 
@@ -239,15 +241,13 @@ public class StoreServiceImpl extends ServiceImpl<StoreMapper, Store> implements
             BeanUtil.copyProperties(storeCompanyDTO, storeDetail);
             return storeDetailService.save(storeDetail);
         } else {
-            store.setStoreAddressDetail(storeCompanyDTO.getStoreAddressDetail());
-            store.setStoreAddressIdPath(storeCompanyDTO.getStoreAddressIdPath());
-            store.setStoreAddressPath(storeCompanyDTO.getStoreAddressPath());
-            this.saveOrUpdate(store);
+            BeanUtil.copyProperties(storeCompanyDTO, store);
+            this.updateById(store);
+            //判断是否存在店铺详情，如果没有则进行新建，如果存在则进行修改
+            StoreDetail storeDetail = storeDetailService.getStoreDetail(store.getId());
+            BeanUtil.copyProperties(storeCompanyDTO, storeDetail);
+            return storeDetailService.updateById(storeDetail);
         }
-        //判断是否存在店铺详情，如果没有则进行新建，如果存在则进行修改
-        StoreDetail storeDetail = storeDetailService.getStoreDetail(store.getId());
-        BeanUtil.copyProperties(storeCompanyDTO, storeDetail);
-        return storeDetailService.updateById(storeDetail);
     }
 
     @Override
@@ -265,6 +265,9 @@ public class StoreServiceImpl extends ServiceImpl<StoreMapper, Store> implements
     public boolean applyThirdStep(StoreOtherInfoDTO storeOtherInfoDTO) {
         //获取当前操作的店铺
         Store store = getStoreByMember();
+        BeanUtil.copyProperties(storeOtherInfoDTO, store);
+        this.updateById(store);
+
         StoreDetail storeDetail = storeDetailService.getStoreDetail(store.getId());
         //设置店铺的其他信息
         BeanUtil.copyProperties(storeOtherInfoDTO, storeDetail);
@@ -301,7 +304,7 @@ public class StoreServiceImpl extends ServiceImpl<StoreMapper, Store> implements
     public Integer todayStoreNum() {
         LambdaQueryWrapper<Store> queryWrapper = Wrappers.lambdaQuery();
         queryWrapper.eq(Store::getStoreDisable, StoreStatusEnum.OPEN.name());
-        queryWrapper.gt(Store::getCreateTime, DateUtil.beginOfDay(new DateTime()));
+        queryWrapper.ge(Store::getCreateTime, DateUtil.beginOfDay(new DateTime()));
         return this.count(queryWrapper);
     }
 

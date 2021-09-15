@@ -1,10 +1,10 @@
 package cn.lili.controller.admin.promotion;
 
 import cn.lili.common.enums.ResultCode;
+import cn.lili.common.enums.ResultUtil;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
-import cn.lili.common.enums.ResultUtil;
 import cn.lili.common.vo.PageVO;
 import cn.lili.common.vo.ResultMessage;
 import cn.lili.modules.promotion.entity.vos.PointsGoodsSearchParams;
@@ -39,7 +39,7 @@ public class PointsGoodsManagerController {
         List<PointsGoodsVO> collect = new ArrayList<>();
         for (PointsGoodsVO i : pointsGoodsList) {
             i.setStoreName(i.getGoodsSku().getStoreName());
-            i.setStoreId(UserContext.getCurrentUser().getStoreId());
+            i.setStoreId(i.getGoodsSku().getStoreId());
             collect.add(i);
         }
         pointsGoodsService.addPointsGoods(collect);

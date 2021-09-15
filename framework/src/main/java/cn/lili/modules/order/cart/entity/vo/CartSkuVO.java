@@ -45,6 +45,9 @@ public class CartSkuVO extends CartBase implements Serializable {
 
     @ApiModelProperty(value = "小记")
     private Double subTotal;
+
+    @ApiModelProperty(value = "小记")
+    private Double utilPrice;
     /**
      * 是否选中，要去结算 0:未选中 1:已选中，默认
      */
@@ -53,9 +56,6 @@ public class CartSkuVO extends CartBase implements Serializable {
 
     @ApiModelProperty(value = "是否免运费")
     private Boolean isFreeFreight;
-
-    @ApiModelProperty(value = "积分购买 积分数量")
-    private Integer point;
 
     @ApiModelProperty(value = "是否失效 ")
     private Boolean invalid;
@@ -66,10 +66,18 @@ public class CartSkuVO extends CartBase implements Serializable {
     @ApiModelProperty(value = "是否可配送")
     private Boolean isShip;
 
-    @ApiModelProperty(value =
-            "拼团id 如果是拼团购买 此值为拼团活动id，" +
-                    "当pintuanId为空，则表示普通购买（或者拼团商品，单独购买）")
+    @ApiModelProperty(value = "拼团id 如果是拼团购买 此值为拼团活动id，" +
+            "当pintuanId为空，则表示普通购买（或者拼团商品，单独购买）")
     private String pintuanId;
+
+    @ApiModelProperty(value = "砍价ID")
+    private String kanjiaId;
+
+    @ApiModelProperty(value = "积分兑换ID")
+    private String pointsId;
+
+    @ApiModelProperty(value = "积分购买 积分数量")
+    private Long point;
 
     @ApiModelProperty(value = "可参与的单品活动")
     private List<PromotionGoods> promotions;
@@ -96,6 +104,7 @@ public class CartSkuVO extends CartBase implements Serializable {
         this.isShip = true;
         this.purchasePrice = goodsSku.getIsPromotion() != null && goodsSku.getIsPromotion() ? goodsSku.getPromotionPrice() : goodsSku.getPrice();
         this.isFreeFreight = false;
+        this.utilPrice = 0D;
         this.setStoreId(goodsSku.getStoreId());
         this.setStoreName(goodsSku.getStoreName());
     }

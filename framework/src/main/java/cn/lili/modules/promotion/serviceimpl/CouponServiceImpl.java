@@ -4,12 +4,12 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.enums.PromotionTypeEnum;
-import cn.lili.trigger.enums.DelayTypeEnums;
-import cn.lili.trigger.interfaces.TimeTrigger;
-import cn.lili.trigger.message.PromotionMessage;
-import cn.lili.trigger.model.TimeExecuteConstant;
-import cn.lili.trigger.model.TimeTriggerMsg;
-import cn.lili.trigger.util.DelayQueueTools;
+import cn.lili.consumer.trigger.enums.DelayTypeEnums;
+import cn.lili.consumer.trigger.interfaces.TimeTrigger;
+import cn.lili.consumer.trigger.message.PromotionMessage;
+import cn.lili.consumer.trigger.model.TimeExecuteConstant;
+import cn.lili.consumer.trigger.model.TimeTriggerMsg;
+import cn.lili.consumer.trigger.util.DelayQueueTools;
 import cn.lili.common.utils.DateUtil;
 import cn.lili.mybatis.util.PageUtil;
 import cn.lili.common.utils.StringUtils;
@@ -264,7 +264,7 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
      */
     @Override
     public void receiveCoupon(String couponId, Integer receiveNum) {
-        CouponVO couponVO = checkStatus(couponId);
+        CouponVO couponVO = this.mongoTemplate.findById(couponId, CouponVO.class);
         couponVO.setReceivedNum(couponVO.getReceivedNum() + receiveNum);
         LambdaUpdateWrapper<Coupon> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(Coupon::getId, couponId);
@@ -281,7 +281,7 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
      */
     @Override
     public void usedCoupon(String couponId, Integer usedNum) {
-        CouponVO couponVO = checkStatus(couponId);
+        CouponVO couponVO = this.mongoTemplate.findById(couponId, CouponVO.class);
         couponVO.setUsedNum(couponVO.getUsedNum() + usedNum);
         LambdaUpdateWrapper<Coupon> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(Coupon::getId, couponId);
@@ -297,6 +297,7 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
      */
     private void checkParam(CouponVO coupon) {
 
+        //优惠券限制领取数量
         if (coupon.getCouponLimitNum() < 0) {
             throw new ServiceException(ResultCode.COUPON_LIMIT_NUM_LESS_THAN_0);
         }
@@ -304,18 +305,21 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
         if (coupon.getPublishNum() != 0 && coupon.getCouponLimitNum() > coupon.getPublishNum()) {
             throw new ServiceException(ResultCode.COUPON_LIMIT_GREATER_THAN_PUBLISH);
         }
+        //打折优惠券大于10折
         boolean discountCoupon = (coupon.getCouponType().equals(CouponTypeEnum.DISCOUNT.name())
                 && (coupon.getCouponDiscount() < 0 && coupon.getCouponDiscount() > 10));
         if (discountCoupon) {
             throw new ServiceException(ResultCode.COUPON_DISCOUNT_ERROR);
         }
 
+        //优惠券为固定时间类型
         if (coupon.getRangeDayType() != null && coupon.getRangeDayType().equals(CouponRangeDayEnum.FIXEDTIME.name())) {
             long nowTime = DateUtil.getDateline() * 1000;
-            if (coupon.getStartTime().getTime() < nowTime && coupon.getEndTime().getTime() > nowTime) {
-                throw new ServiceException(ResultCode.PROMOTION_TIME_ERROR);
+            //固定时间的优惠券不能小于当前时间
+            if (coupon.getEndTime().getTime() < nowTime) {
+                throw new ServiceException(ResultCode.PROMOTION_END_TIME_ERROR);
             }
-
+            //促销通用时间校验
             PromotionTools.checkPromotionTime(coupon.getStartTime().getTime(), coupon.getEndTime().getTime());
         }
 
@@ -397,7 +401,7 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
         LambdaQueryWrapper<FullDiscount> queryWrapper = new LambdaQueryWrapper<FullDiscount>().eq(FullDiscount::getIsCoupon, true).eq(FullDiscount::getCouponId, id);
         FullDiscount fullDiscount = fullDiscountService.getOne(queryWrapper);
         if (fullDiscount != null) {
-            throw new ServiceException("当前优惠券参与了促销活动 " + fullDiscount.getTitle() + " 不能进行编辑删除操作");
+            throw new ServiceException("当前优惠券参与了促销活动【" + fullDiscount.getPromotionName() + "】不能进行编辑删除操作");
         }
         return coupon;
     }

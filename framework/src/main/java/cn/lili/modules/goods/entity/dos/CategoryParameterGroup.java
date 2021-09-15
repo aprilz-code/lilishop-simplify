@@ -5,10 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.hibernate.validator.constraints.Length;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
@@ -18,9 +17,8 @@ import javax.validation.constraints.NotNull;
  * @author pikachu
  * @since 2020-02-26 10:34:02
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
-@Entity
-@Table(name = "li_category_parameter_group")
 @TableName("li_category_parameter_group")
 @ApiModel(value = "分类绑定参数组")
 public class CategoryParameterGroup extends BaseEntity {

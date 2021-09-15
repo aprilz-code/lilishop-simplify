@@ -1,24 +1,17 @@
 package cn.lili.modules.promotion.serviceimpl;
 
+import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.trigger.util.DelayQueueTools;
-import cn.lili.trigger.enums.DelayTypeEnums;
-import cn.lili.trigger.message.PromotionMessage;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.trigger.interfaces.TimeTrigger;
-import cn.lili.trigger.model.TimeExecuteConstant;
-import cn.lili.trigger.model.TimeTriggerMsg;
+import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.common.utils.BeanUtil;
 import cn.lili.common.utils.DateUtil;
-import cn.lili.mybatis.util.PageUtil;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.modules.promotion.entity.dos.PromotionGoods;
 import cn.lili.modules.promotion.entity.dos.Seckill;
 import cn.lili.modules.promotion.entity.dos.SeckillApply;
 import cn.lili.modules.promotion.entity.enums.PromotionStatusEnum;
-import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.modules.promotion.entity.enums.SeckillApplyStatusEnum;
 import cn.lili.modules.promotion.entity.vos.SeckillSearchParams;
 import cn.lili.modules.promotion.entity.vos.SeckillVO;
@@ -32,6 +25,13 @@ import cn.lili.modules.system.entity.dos.Setting;
 import cn.lili.modules.system.entity.dto.SeckillSetting;
 import cn.lili.modules.system.entity.enums.SettingEnum;
 import cn.lili.modules.system.service.SettingService;
+import cn.lili.mybatis.util.PageUtil;
+import cn.lili.consumer.trigger.enums.DelayTypeEnums;
+import cn.lili.consumer.trigger.interfaces.TimeTrigger;
+import cn.lili.consumer.trigger.message.PromotionMessage;
+import cn.lili.consumer.trigger.model.TimeExecuteConstant;
+import cn.lili.consumer.trigger.model.TimeTriggerMsg;
+import cn.lili.consumer.trigger.util.DelayQueueTools;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -47,6 +47,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -59,6 +60,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class SeckillServiceImpl extends ServiceImpl<SeckillMapper, Seckill> implements SeckillService {
+
 
     /**
      * 延时任务
@@ -139,7 +141,8 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillMapper, Seckill> impl
 
         Setting setting = settingService.get(SettingEnum.SECKILL_SETTING.name());
         SeckillSetting seckillSetting = new Gson().fromJson(setting.getSettingValue(), SeckillSetting.class);
-        for (int i = 1; i <= 30; i++) {
+
+        for (int i = 1; i <= PRE_CREATION; i++) {
             Seckill seckill = new Seckill(i, seckillSetting.getHours(), seckillSetting.getSeckillRule());
             this.saveSeckill(seckill);
         }
@@ -154,7 +157,7 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillMapper, Seckill> impl
         seckillVO.setSeckillApplyStatus(SeckillApplyStatusEnum.NOT_APPLY.name());
         seckillVO.setSeckillApplyList(null);
         //检查秒杀活动参数
-        checkSeckillParam(seckillVO, seckill.getStoreId());
+        checkSeckillParam(seckillVO);
         //保存到MYSQL中
         boolean result = this.save(seckillVO);
         //保存到MONGO中
@@ -185,14 +188,16 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillMapper, Seckill> impl
         if (PromotionStatusEnum.START.name().equals(seckillVO.getPromotionStatus())) {
             throw new ServiceException(ResultCode.PROMOTION_UPDATE_ERROR);
         }
-        //检查秒杀活动参数
-        this.checkSeckillParam(seckillVO, seckillVO.getStoreId());
-
+        PromotionTools.checkPromotionTime(seckillVO.getStartTime().getTime(), seckillVO.getEndTime().getTime());
         //更新到MYSQL中
         boolean result = this.updateById(seckillVO);
         //保存到MONGO中
         this.mongoTemplate.save(seckillVO);
+        //如果编辑后活动时间不一致，则编辑延时任务
         if (seckill.getStartTime().getTime() != seckillVO.getStartTime().getTime()) {
+            if (seckillVO.getEndTime() == null) {
+                seckillVO.setEndTime(cn.hutool.core.date.DateUtil.endOfDay(new Date()));
+            }
             PromotionMessage promotionMessage = new PromotionMessage(seckillVO.getId(), PromotionTypeEnum.SECKILL.name(), PromotionStatusEnum.START.name(), seckillVO.getStartTime(), seckillVO.getEndTime());
             //更新延时任务
             this.timeTrigger.edit(TimeExecuteConstant.PROMOTION_EXECUTOR,
@@ -235,6 +240,9 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillMapper, Seckill> impl
     @Override
     public void openSeckill(String id) {
         SeckillVO seckillVO = checkSeckillExist(id);
+        if (seckillVO.getEndTime() == null) {
+            seckillVO.setEndTime(cn.hutool.core.date.DateUtil.endOfDay(seckillVO.getStartTime()));
+        }
         PromotionTools.checkPromotionTime(seckillVO.getStartTime().getTime(), seckillVO.getEndTime().getTime());
         if (PromotionStatusEnum.NEW.name().equals(seckillVO.getPromotionStatus()) || PromotionStatusEnum.CLOSE.name().equals(seckillVO.getPromotionStatus())) {
             LambdaUpdateWrapper<Seckill> updateWrapper = new LambdaUpdateWrapper<Seckill>().eq(Seckill::getId, id).set(Seckill::getPromotionStatus, PromotionStatusEnum.START.name());
@@ -290,7 +298,7 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillMapper, Seckill> impl
      *
      * @param seckill 秒杀活动
      */
-    private void addSeckillStartTask(SeckillVO seckill) {
+    public void addSeckillStartTask(SeckillVO seckill) {
         PromotionMessage promotionMessage = new PromotionMessage(seckill.getId(), PromotionTypeEnum.SECKILL.name(), PromotionStatusEnum.START.name(), seckill.getStartTime(), seckill.getEndTime());
         TimeTriggerMsg timeTriggerMsg = new TimeTriggerMsg(TimeExecuteConstant.PROMOTION_EXECUTOR,
                 seckill.getStartTime().getTime(),
@@ -319,11 +327,10 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillMapper, Seckill> impl
      * 检查秒杀活动参数
      *
      * @param seckill 秒杀活动信息
-     * @param storeId 卖家编号
      */
-    private void checkSeckillParam(SeckillVO seckill, String storeId) {
+    private void checkSeckillParam(SeckillVO seckill) {
         //同一时间段内相同的活动
-        QueryWrapper<Seckill> queryWrapper = PromotionTools.checkActiveTime(seckill.getStartTime(), seckill.getEndTime(), PromotionTypeEnum.SECKILL, storeId, seckill.getId());
+        QueryWrapper<Seckill> queryWrapper = PromotionTools.checkActiveTime(seckill.getStartTime(), seckill.getEndTime(), PromotionTypeEnum.SECKILL, null, seckill.getId());
         int sameNum = this.count(queryWrapper);
         //当前时间段是否存在同类活动
         if (sameNum > 0) {

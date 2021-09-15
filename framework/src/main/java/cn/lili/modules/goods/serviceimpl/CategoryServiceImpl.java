@@ -1,6 +1,6 @@
 package cn.lili.modules.goods.serviceimpl;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ResultCode;
@@ -48,10 +48,22 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         return this.list(new LambdaQueryWrapper<Category>().eq(Category::getParentId, parentId));
     }
 
+    /**
+     * 根据分类id集合获取所有分类根据层级排序
+     *
+     * @param ids 分类ID集合
+     * @return 商品分类列表
+     */
+    @Override
+    public List<Category> listByIdsOrderByLevel(List<String> ids) {
+        return this.list(new LambdaQueryWrapper<Category>().in(Category::getId, ids).orderByAsc(Category::getLevel));
+    }
+
     @Override
     public List<CategoryVO> categoryTree() {
-        if (cache.hasKey(CachePrefix.CATEGORY.getPrefix() + "tree")) {
-            return (List<CategoryVO>) cache.get(CachePrefix.CATEGORY.getPrefix() + "tree");
+        List<CategoryVO> categoryVOList = (List<CategoryVO>) cache.get(CachePrefix.CATEGORY.getPrefix());
+        if (categoryVOList != null) {
+            return categoryVOList;
         }
 
         //获取全部分类
@@ -60,7 +72,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         List<Category> list = this.list(queryWrapper);
 
         //构造分类树
-        List<CategoryVO> categoryVOList = new ArrayList<>();
+        categoryVOList = new ArrayList<>();
         for (Category category : list) {
             if ("0".equals(category.getParentId())) {
                 CategoryVO categoryVO = new CategoryVO(category);
@@ -68,14 +80,10 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
                 categoryVOList.add(categoryVO);
             }
         }
-        categoryVOList.sort(new Comparator<CategoryVO>() {
-            @Override
-            public int compare(CategoryVO o1, CategoryVO o2) {
-                return o1.getSortOrder().compareTo(o2.getSortOrder());
-            }
-        });
-        if (categoryVOList.size() != 0) {
-            cache.put(CachePrefix.CATEGORY.getPrefix() + "tree", categoryVOList);
+        categoryVOList.sort(Comparator.comparing(Category::getSortOrder));
+        if (!categoryVOList.isEmpty()) {
+            cache.put(CachePrefix.CATEGORY.getPrefix(), categoryVOList);
+            cache.put(CachePrefix.CATEGORY_ARRAY.getPrefix(), list);
         }
         return categoryVOList;
     }
@@ -83,15 +91,13 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
     @Override
     public List<CategoryVO> getStoreCategory(String[] categories) {
         List<String> arr = Arrays.asList(categories.clone());
-        List<CategoryVO> categoryVOS = categoryTree().stream()
+        return categoryTree().stream()
                 .filter(item -> arr.contains(item.getId())).collect(Collectors.toList());
-        return categoryVOS;
-
     }
 
     @Override
     public List<Category> firstCategory() {
-        QueryWrapper queryWrapper = Wrappers.query();
+        QueryWrapper<Category> queryWrapper = Wrappers.query();
         queryWrapper.eq("level", 0);
         return list(queryWrapper);
     }
@@ -106,14 +112,15 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         for (CategoryVO item : topCatList) {
             if (item.getId().equals(parentId)) {
                 return item.getChildren();
+            } else {
+                return getChildren(parentId, item.getChildren());
             }
-            return getChildren(parentId, item.getChildren());
         }
         return new ArrayList<>();
     }
 
     @Override
-    public List<CategoryVO> listAllChildrenDB() {
+    public List<CategoryVO> listAllChildren() {
 
         //获取全部分类
         List<Category> list = this.list();
@@ -127,12 +134,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
                 categoryVOList.add(categoryVO);
             }
         }
-        categoryVOList.sort(new Comparator<CategoryVO>() {
-            @Override
-            public int compare(CategoryVO o1, CategoryVO o2) {
-                return o1.getSortOrder().compareTo(o2.getSortOrder());
-            }
-        });
+        categoryVOList.sort(Comparator.comparing(Category::getSortOrder));
         return categoryVOList;
     }
 
@@ -144,15 +146,35 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
      */
     @Override
     public List<String> getCategoryNameByIds(List<String> ids) {
-        List<String> categoryVOS = categoryTree().stream().filter(item -> ids.contains(item.getId())).map(Category::getName).collect(Collectors.toList());
-        return categoryVOS;
+        List<String> categoryName = new ArrayList<>();
+        List<Category> categoryVOList = (List<Category>) cache.get(CachePrefix.CATEGORY_ARRAY.getPrefix());
+        //如果缓存中为空，则重新获取缓存
+        if (categoryVOList == null) {
+            categoryTree();
+            categoryVOList = (List<Category>) cache.get(CachePrefix.CATEGORY_ARRAY.getPrefix());
+        }
+        //还为空的话，直接返回
+        if (categoryVOList == null) {
+            return new ArrayList<>();
+        }
+        //循环顶级分类
+        for (Category category : categoryVOList) {
+            //循环查询的id匹配
+            for (String id : ids) {
+                if (category.getId().equals(id)) {
+                    //写入商品分类
+                    categoryName.add(category.getName());
+                }
+            }
+        }
+        return categoryName;
     }
 
     @Override
     public List<Category> findByAllBySortOrder(Category category) {
         QueryWrapper<Category> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq(category.getLevel() != null, "level", category.getLevel())
-                .eq(StrUtil.isNotBlank(category.getName()), "name", category.getName())
+                .eq(CharSequenceUtil.isNotBlank(category.getName()), "name", category.getName())
                 .eq(category.getParentId() != null, "parent_id", category.getParentId())
                 .ne(category.getId() != null, "id", category.getId())
                 .eq(DELETE_FLAG_COLUMN, false)
@@ -251,13 +273,13 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Category::getParentId, category.getId());
         List<Category> categories = this.list(queryWrapper);
-        List<CategoryVO> categoryVOS = new ArrayList<>();
+        List<CategoryVO> categoryVOList = new ArrayList<>();
         for (Category category1 : categories) {
-            categoryVOS.add(new CategoryVO(category1));
+            categoryVOList.add(new CategoryVO(category1));
         }
-        category.setChildren(categoryVOS);
-        if (!categoryVOS.isEmpty()) {
-            categoryVOS.forEach(this::findAllChild);
+        category.setChildren(categoryVOList);
+        if (!categoryVOList.isEmpty()) {
+            categoryVOList.forEach(this::findAllChild);
         }
     }
 
@@ -307,26 +329,26 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
     /**
      * 递归自身，找到id等于parentId的对象，获取他的children 返回
      *
-     * @param parentId    父ID
-     * @param categoryVOS 分类VO
+     * @param parentId       父ID
+     * @param categoryVOList 分类VO
      * @return 子分类列表VO
      */
-    private List<CategoryVO> getChildren(String parentId, List<CategoryVO> categoryVOS) {
-        for (CategoryVO item : categoryVOS) {
+    private List<CategoryVO> getChildren(String parentId, List<CategoryVO> categoryVOList) {
+        for (CategoryVO item : categoryVOList) {
             if (item.getId().equals(parentId)) {
                 return item.getChildren();
             }
-            if (item.getChildren() != null && item.getChildren().size() > 0) {
-                return getChildren(parentId, categoryVOS);
+            if (item.getChildren() != null && !item.getChildren().isEmpty()) {
+                return getChildren(parentId, categoryVOList);
             }
         }
-        return null;
+        return categoryVOList;
     }
 
     /**
      * 清除缓存
      */
     private void removeCache() {
-        cache.remove(CachePrefix.CATEGORY.getPrefix() + "tree");
+        cache.remove(CachePrefix.CATEGORY.getPrefix());
     }
 }

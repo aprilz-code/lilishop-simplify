@@ -4,12 +4,12 @@ import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.json.JSONUtil;
+import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.enums.PromotionTypeEnum;
-import cn.lili.trigger.message.PromotionMessage;
 import cn.lili.modules.order.cart.entity.vo.FullDiscountVO;
 import cn.lili.modules.promotion.entity.dos.*;
+import cn.lili.modules.promotion.entity.dto.KanjiaActivityGoodsDTO;
 import cn.lili.modules.promotion.entity.enums.*;
 import cn.lili.modules.promotion.entity.vos.CouponVO;
 import cn.lili.modules.promotion.entity.vos.PintuanVO;
@@ -18,6 +18,7 @@ import cn.lili.modules.promotion.entity.vos.SeckillVO;
 import cn.lili.modules.promotion.service.*;
 import cn.lili.modules.search.entity.dos.EsGoodsIndex;
 import cn.lili.modules.search.service.EsGoodsIndexService;
+import cn.lili.consumer.trigger.message.PromotionMessage;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -97,6 +98,8 @@ public class PromotionServiceImpl implements PromotionService {
      */
     @Autowired
     private MongoTemplate mongoTemplate;
+    @Autowired
+    private KanjiaActivityGoodsService kanJiaActivityGoodsService;
 
 
     @Override
@@ -112,7 +115,7 @@ public class PromotionServiceImpl implements PromotionService {
                 break;
             //秒杀
             case SECKILL:
-                result = this.updateSeckill(promotionMessage, esPromotionKey, promotionTypeEnum);
+                result = this.updateSeckill(promotionMessage, promotionTypeEnum);
                 break;
             //拼团
             case PINTUAN:
@@ -124,7 +127,11 @@ public class PromotionServiceImpl implements PromotionService {
                 break;
             //积分商品
             case POINTS_GOODS:
-                result = this.updatePointsGoods(promotionMessage, esPromotionKey, promotionTypeEnum);
+                result = this.updatePointsGoods(promotionMessage, promotionTypeEnum);
+                break;
+            //砍价商品商品
+            case KANJIA:
+                result = this.updateKanjiaGoods(promotionMessage, promotionTypeEnum);
                 break;
             //优惠券活动
             case COUPON_ACTIVITY:
@@ -147,8 +154,8 @@ public class PromotionServiceImpl implements PromotionService {
         Map<String, Object> resultMap = new HashMap<>(16);
         QueryWrapper queryWrapper = new QueryWrapper();
         queryWrapper.eq("promotion_status", PromotionStatusEnum.START.name());
-        queryWrapper.gt("start_time", new Date());
-        queryWrapper.lt("end_time", new Date());
+        queryWrapper.ge("start_time", new Date());
+        queryWrapper.le("end_time", new Date());
         //获取当前进行的秒杀活动活动
         List<Seckill> seckillList = seckillService.list(queryWrapper);
         if (seckillList != null && !seckillList.isEmpty()) {
@@ -185,10 +192,10 @@ public class PromotionServiceImpl implements PromotionService {
         Query query = new Query();
         query.addCriteria(Criteria.where("deleteFlag").is(false));
         query.addCriteria(Criteria.where("promotionStatus").is(PromotionStatusEnum.START.name()));
-        query.addCriteria(Criteria.where("endTime").gt(new Date()));
+        query.addCriteria(Criteria.where("endTime").gte(new Date()));
         List<FullDiscountVO> fullDiscountVOS = mongoTemplate.find(query, FullDiscountVO.class);
         for (FullDiscountVO fullDiscountVO : fullDiscountVOS) {
-            if (fullDiscountVO.getPromotionGoodsList() == null && fullDiscountVO.getNumber() == -1) {
+            if (fullDiscountVO.getPromotionGoodsList() == null) {
                 if (index.getStoreId().equals(fullDiscountVO.getStoreId())) {
                     String fullDiscountKey = PromotionTypeEnum.FULL_DISCOUNT.name() + "-" + fullDiscountVO.getId();
                     promotionMap.put(fullDiscountKey, fullDiscountVO);
@@ -204,13 +211,13 @@ public class PromotionServiceImpl implements PromotionService {
                 }
             }
         }
-        LambdaQueryWrapper<PromotionGoods> queryWrapper1 = new LambdaQueryWrapper<>();
-        queryWrapper1.eq(PromotionGoods::getDeleteFlag, false);
-        queryWrapper1.eq(PromotionGoods::getPromotionStatus, PromotionStatusEnum.START.name());
-        queryWrapper1.gt(PromotionGoods::getEndTime, new Date());
-        queryWrapper1.eq(PromotionGoods::getSkuId, index.getId());
-        List<PromotionGoods> list1 = promotionGoodsService.list(queryWrapper1);
-        for (PromotionGoods promotionGoods : list1) {
+        LambdaQueryWrapper<PromotionGoods> promotionGoodsQuery = new LambdaQueryWrapper<>();
+        promotionGoodsQuery.eq(PromotionGoods::getDeleteFlag, false);
+        promotionGoodsQuery.eq(PromotionGoods::getPromotionStatus, PromotionStatusEnum.START.name());
+        promotionGoodsQuery.ge(PromotionGoods::getEndTime, new Date());
+        promotionGoodsQuery.eq(PromotionGoods::getSkuId, index.getId());
+        List<PromotionGoods> promotionGoodsList = promotionGoodsService.list(promotionGoodsQuery);
+        for (PromotionGoods promotionGoods : promotionGoodsList) {
             String esPromotionKey = promotionGoods.getPromotionType() + "-" + promotionGoods.getPromotionId();
             switch (PromotionTypeEnum.valueOf(promotionGoods.getPromotionType())) {
                 case COUPON:
@@ -281,7 +288,7 @@ public class PromotionServiceImpl implements PromotionService {
         //clone一个活动信息，用于存放与索引中
         FullDiscountVO clone = ObjectUtil.clone(fullDiscountVO);
         clone.setPromotionGoodsList(null);
-        if (fullDiscountVO.getPromotionGoodsList() == null && fullDiscountVO.getNumber() == -1) {
+        if (fullDiscountVO.getPromotionGoodsList() == null) {
             //如果为全品类则更新全部索引
             this.goodsIndexService.updateEsGoodsIndexAllByList(clone, esPromotionKey);
         } else {
@@ -374,22 +381,23 @@ public class PromotionServiceImpl implements PromotionService {
      * 修改秒杀状态
      *
      * @param promotionMessage  信息队列传输促销信息实体
-     * @param esPromotionKey    es Key
      * @param promotionTypeEnum 促销分类枚举
      * @return 修改结果
      */
-    private boolean updateSeckill(PromotionMessage promotionMessage, String esPromotionKey, PromotionTypeEnum promotionTypeEnum) {
+    private boolean updateSeckill(PromotionMessage promotionMessage, PromotionTypeEnum promotionTypeEnum) {
         boolean result;
         SeckillVO seckill = this.mongoTemplate.findById(promotionMessage.getPromotionId(), SeckillVO.class);
         if (seckill == null) {
             this.throwPromotionException(promotionTypeEnum, promotionMessage.getPromotionId(), promotionMessage.getPromotionStatus());
             return false;
         }
-
+        if (seckill.getEndTime() == null) {
+            seckill.setEndTime(DateUtil.endOfDay(seckill.getStartTime()));
+        }
         //修改活动状态
         seckill.setPromotionStatus(promotionMessage.getPromotionStatus());
         result = this.seckillService.update(updateWrapper(promotionMessage));
-
+        log.info("更新限时抢购活动状态：{}", seckill);
         //判断参与活动的商品是否为空，如果为空则返回
         if (seckill.getSeckillApplyList() == null) {
             return result;
@@ -422,9 +430,11 @@ public class PromotionServiceImpl implements PromotionService {
                 seckill1.setStartTime(parseStartTime);
                 //当时商品的秒杀活动活动结束时间为下个时间段的开始
                 seckill1.setEndTime(parseEndTime);
+                log.info("更新限时抢购商品状态:{}", seckill1);
                 this.goodsIndexService.updateEsGoodsIndex(seckillApply.getSkuId(), seckill1, promotionTypeEnum.name() + "-" + seckillApply.getTimeLine(), seckillApply.getPrice());
             }
         }
+        this.mongoTemplate.save(seckill);
         return result;
     }
 
@@ -432,11 +442,10 @@ public class PromotionServiceImpl implements PromotionService {
      * 修改积分商品状态
      *
      * @param promotionMessage  信息队列传输促销信息实体
-     * @param esPromotionKey    es Key
      * @param promotionTypeEnum 促销分类枚举
      * @return 修改结果
      */
-    private boolean updatePointsGoods(PromotionMessage promotionMessage, String esPromotionKey, PromotionTypeEnum promotionTypeEnum) {
+    private boolean updatePointsGoods(PromotionMessage promotionMessage, PromotionTypeEnum promotionTypeEnum) {
         boolean result;
         PointsGoodsVO pointsGoodsVO = this.mongoTemplate.findById(promotionMessage.getPromotionId(), PointsGoodsVO.class);
         if (pointsGoodsVO == null) {
@@ -445,9 +454,28 @@ public class PromotionServiceImpl implements PromotionService {
         }
         pointsGoodsVO.setPromotionStatus(promotionMessage.getPromotionStatus());
         result = this.pointsGoodsService.update(updateWrapper(promotionMessage));
-        PointsGoods pointsGoods = JSONUtil.toBean(JSONUtil.toJsonStr(pointsGoodsVO), PointsGoods.class);
-        this.goodsIndexService.updateEsGoodsIndex(pointsGoodsVO.getSkuId(), pointsGoods, esPromotionKey, null);
         this.mongoTemplate.save(pointsGoodsVO);
+        return result;
+    }
+
+    /**
+     * 修改砍价商品状态
+     *
+     * @param promotionMessage  信息队列传输促销信息实体
+     * @param promotionTypeEnum 促销分类枚举
+     * @return 修改结果
+     */
+    private boolean updateKanjiaGoods(PromotionMessage promotionMessage, PromotionTypeEnum promotionTypeEnum) {
+        KanjiaActivityGoodsDTO kanJiaActivityGoodsDTO = this.mongoTemplate.findById(promotionMessage.getPromotionId(), KanjiaActivityGoodsDTO.class);
+        if (kanJiaActivityGoodsDTO == null) {
+            this.throwPromotionException(promotionTypeEnum, promotionMessage.getPromotionId(), promotionMessage.getPromotionStatus());
+            return false;
+        }
+        kanJiaActivityGoodsDTO.setPromotionStatus(promotionMessage.getPromotionStatus());
+        boolean result = this.kanJiaActivityGoodsService.updateById(kanJiaActivityGoodsDTO);
+        if (result) {
+            this.mongoTemplate.save(kanJiaActivityGoodsDTO);
+        }
         return result;
     }
 
@@ -500,6 +528,7 @@ public class PromotionServiceImpl implements PromotionService {
 
     /**
      * 根据消息，获取update wrapper
+     *
      * @param <T>
      * @return
      */

@@ -9,6 +9,8 @@ import cn.lili.modules.order.cart.entity.enums.CartTypeEnum;
 import cn.lili.modules.order.cart.entity.vo.CartSkuVO;
 import cn.lili.modules.order.cart.entity.vo.CartVO;
 import cn.lili.modules.order.cart.entity.vo.PriceDetailVO;
+import cn.lili.modules.promotion.entity.dos.MemberCoupon;
+import cn.lili.modules.promotion.entity.vos.MemberCouponVO;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -61,14 +63,6 @@ public class TradeDTO implements Serializable {
      * 购物车类型
      */
     private CartTypeEnum cartTypeEnum;
-
-    /**
-     * key 为商家id
-     * value 为商家优惠券
-     * 店铺优惠券
-     */
-    private Map<String, MemberCouponDTO> storeCoupons;
-
     /**
      * 店铺备注
      */
@@ -88,6 +82,23 @@ public class TradeDTO implements Serializable {
      * 使用平台优惠券，一笔订单只能使用一个平台优惠券
      */
     private MemberCouponDTO platformCoupon;
+
+    /**
+     * key 为商家id
+     * value 为商家优惠券
+     * 店铺优惠券
+     */
+    private Map<String, MemberCouponDTO> storeCoupons;
+
+    /**
+     * 可用优惠券列表
+     */
+    private List<MemberCoupon> canUseCoupons;
+
+    /**
+     * 无法使用优惠券无法使用的原因
+     */
+    private List<MemberCouponVO> cantUseCoupons;
 
     /**
      * 收货地址
@@ -120,13 +131,16 @@ public class TradeDTO implements Serializable {
     private List<OrderVO> orderVO;
 
     public TradeDTO(CartTypeEnum cartTypeEnum) {
+        this.cartTypeEnum = cartTypeEnum;
+
         this.skuList = new ArrayList<>();
         this.cartList = new ArrayList<>();
         this.skuPromotionDetail = new HashMap<>();
         this.storeCoupons = new HashMap<>();
         this.storeCoupons = new HashMap<>();
         this.priceDetailDTO = new PriceDetailDTO();
-        this.cartTypeEnum = cartTypeEnum;
+        this.cantUseCoupons = new ArrayList<>();
+        this.canUseCoupons = new ArrayList<>();
         this.needReceipt = false;
     }
 

@@ -2,13 +2,15 @@ package cn.lili.modules.promotion.serviceimpl;
 
 import cn.hutool.core.util.StrUtil;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.trigger.util.DelayQueueTools;
-import cn.lili.trigger.enums.DelayTypeEnums;
-import cn.lili.trigger.message.PromotionMessage;
+import cn.lili.common.security.context.UserContext;
+import cn.lili.common.security.enums.UserEnums;
+import cn.lili.consumer.trigger.util.DelayQueueTools;
+import cn.lili.consumer.trigger.enums.DelayTypeEnums;
+import cn.lili.consumer.trigger.message.PromotionMessage;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.trigger.interfaces.TimeTrigger;
-import cn.lili.trigger.model.TimeExecuteConstant;
-import cn.lili.trigger.model.TimeTriggerMsg;
+import cn.lili.consumer.trigger.interfaces.TimeTrigger;
+import cn.lili.consumer.trigger.model.TimeExecuteConstant;
+import cn.lili.consumer.trigger.model.TimeTriggerMsg;
 import cn.lili.common.utils.DateUtil;
 import cn.lili.common.vo.PageVO;
 import cn.lili.common.properties.RocketmqCustomProperties;
@@ -203,18 +205,15 @@ public class PointsGoodsServiceImpl extends ServiceImpl<PointsGoodsMapper, Point
         return this.checkExist(id);
     }
 
-    /**
-     * 根据SkuID获取积分详情
-     *
-     * @param skuId@return 积分详情
-     */
     @Override
-    public PointsGoods getPointsGoodsDetailBySkuId(String skuId) {
-        LambdaQueryWrapper<PointsGoods> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(PointsGoods::getSkuId, skuId).eq(PointsGoods::getPromotionStatus, PromotionStatusEnum.START.name());
-        List<PointsGoods> list = this.list(queryWrapper);
-        if (list.size() == 1) {
-            return list.get(0);
+    public PointsGoodsVO getPointsGoodsVOByMongo(String skuId) {
+        //mongo查询条件
+        Query query = new Query();
+        query.addCriteria(Criteria.where("skuId").is(skuId))
+                .addCriteria(Criteria.where("promotionStatus").is(PromotionStatusEnum.START.name()));
+        List<PointsGoodsVO> pointsGoodsVO = this.mongoTemplate.find(query, PointsGoodsVO.class);
+        if (pointsGoodsVO != null && pointsGoodsVO.size() > 0) {
+            return pointsGoodsVO.get(0);
         }
         return null;
     }
@@ -229,6 +228,9 @@ public class PointsGoodsServiceImpl extends ServiceImpl<PointsGoodsMapper, Point
     @Override
     public IPage<PointsGoodsVO> getPointsGoodsByPage(PointsGoodsSearchParams searchParams, PageVO page) {
         IPage<PointsGoodsVO> pointsGoodsPage = new Page<>();
+        if (UserContext.getCurrentUser().getRole().equals(UserEnums.MEMBER)) {
+            searchParams.setPromotionStatus(PromotionStatusEnum.START.name());
+        }
         Query query = searchParams.mongoQuery();
         if (page != null) {
             PromotionTools.mongoQueryPageParam(query, page);

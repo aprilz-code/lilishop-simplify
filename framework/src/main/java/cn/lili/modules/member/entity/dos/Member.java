@@ -1,7 +1,9 @@
 package cn.lili.modules.member.entity.dos;
 
-import cn.lili.mybatis.BaseEntity;
 import cn.lili.common.enums.ClientTypeEnum;
+import cn.lili.common.security.sensitive.Sensitive;
+import cn.lili.common.security.sensitive.enums.SensitiveStrategy;
+import cn.lili.mybatis.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
@@ -10,8 +12,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotEmpty;
 import java.util.Date;
@@ -23,8 +23,6 @@ import java.util.Date;
  * @since 2020-02-25 14:10:16
  */
 @Data
-@Entity
-@Table(name = "li_member")
 @TableName("li_member")
 @ApiModel(value = "会员")
 @NoArgsConstructor
@@ -46,7 +44,7 @@ public class Member extends BaseEntity {
     private Integer sex;
 
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
-  @DateTimeFormat(pattern = "yyyy-MM-dd")
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
     @ApiModelProperty(value = "会员生日")
     private Date birthday;
 
@@ -58,11 +56,16 @@ public class Member extends BaseEntity {
 
     @NotEmpty(message = "手机号码不能为空")
     @ApiModelProperty(value = "手机号码", required = true)
+    @Sensitive(strategy = SensitiveStrategy.PHONE)
     private String mobile;
 
     @Min(message = "必须为数字", value = 0)
     @ApiModelProperty(value = "积分数量")
     private Long point;
+
+    @Min(message = "必须为数字", value = 0)
+    @ApiModelProperty(value = "积分总数量")
+    private Long totalPoint;
 
     @ApiModelProperty(value = "会员头像")
     private String face;
@@ -103,6 +106,7 @@ public class Member extends BaseEntity {
         this.haveStore = false;
         this.sex = 0;
         this.point = 0L;
+        this.totalPoint = 0L;
         this.lastLoginDate = new Date();
     }
 
@@ -116,6 +120,7 @@ public class Member extends BaseEntity {
         this.face = face;
         this.sex = 0;
         this.point = 0L;
+        this.totalPoint = 0L;
         this.lastLoginDate = new Date();
     }
 
@@ -129,6 +134,7 @@ public class Member extends BaseEntity {
         this.face = face;
         this.sex = sex;
         this.point = 0L;
+        this.totalPoint = 0L;
         this.lastLoginDate = new Date();
     }
 }

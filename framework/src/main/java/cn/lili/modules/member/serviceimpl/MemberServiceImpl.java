@@ -4,21 +4,18 @@ package cn.lili.modules.member.serviceimpl;
 import cn.hutool.core.convert.Convert;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
+import cn.lili.common.context.ThreadContextHolder;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.enums.SwitchEnum;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.mybatis.util.PageUtil;
-import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
-import cn.lili.rocketmq.tags.MemberTagsEnum;
+import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.token.Token;
-import cn.lili.modules.member.token.MemberTokenGenerate;
-import cn.lili.modules.member.token.StoreTokenGenerate;
-import cn.lili.common.utils.*;
+import cn.lili.common.utils.BeanUtil;
+import cn.lili.common.utils.CookieUtil;
+import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
-import cn.lili.common.context.ThreadContextHolder;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.modules.connect.config.ConnectAuthEnum;
 import cn.lili.modules.connect.entity.Connect;
 import cn.lili.modules.connect.entity.dto.ConnectAuthUser;
@@ -30,15 +27,21 @@ import cn.lili.modules.member.entity.dto.ManagerMemberEditDTO;
 import cn.lili.modules.member.entity.dto.MemberAddDTO;
 import cn.lili.modules.member.entity.dto.MemberEditDTO;
 import cn.lili.modules.member.entity.dto.MemberPointMessage;
+import cn.lili.modules.member.entity.enums.PointTypeEnum;
 import cn.lili.modules.member.entity.vo.MemberDistributionVO;
 import cn.lili.modules.member.entity.vo.MemberSearchVO;
 import cn.lili.modules.member.mapper.MemberMapper;
 import cn.lili.modules.member.service.MemberService;
+import cn.lili.modules.member.token.MemberTokenGenerate;
+import cn.lili.modules.member.token.StoreTokenGenerate;
 import cn.lili.modules.store.entity.dos.Store;
 import cn.lili.modules.store.entity.enums.StoreStatusEnum;
 import cn.lili.modules.store.service.StoreService;
 import cn.lili.modules.system.utils.CharacterConstant;
 import cn.lili.modules.system.utils.SensitiveWordsFilter;
+import cn.lili.mybatis.util.PageUtil;
+import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
+import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -53,6 +56,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 会员接口业务层实现
@@ -228,7 +232,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
     @Override
     public Token mobilePhoneLogin(String mobilePhone) {
-        QueryWrapper<Member> queryWrapper = new QueryWrapper();
+        QueryWrapper<Member> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("mobile", mobilePhone);
         Member member = this.baseMapper.selectOne(queryWrapper);
         //如果手机号不存在则自动注册用户
@@ -246,7 +250,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
     @Override
     public Member editOwn(MemberEditDTO memberEditDTO) {
         //查询会员信息
-        Member member = this.findByUsername(UserContext.getCurrentUser().getUsername());
+        Member member = this.findByUsername(Objects.requireNonNull(UserContext.getCurrentUser()).getUsername());
         //传递修改会员信息
         BeanUtil.copyProperties(memberEditDTO, member);
         //修改会员
@@ -291,11 +295,11 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
     @Override
     public boolean changeMobile(String mobile) {
-        AuthUser tokenUser = UserContext.getCurrentUser();
+        AuthUser tokenUser = Objects.requireNonNull(UserContext.getCurrentUser());
         Member member = this.findByUsername(tokenUser.getUsername());
 
         //判断是否用户登录并且会员ID为当前登录会员ID
-        if (tokenUser == null || tokenUser.getId() != member.getId()) {
+        if (!Objects.equals(tokenUser.getId(), member.getId())) {
             throw new ServiceException(ResultCode.USER_NOT_LOGIN);
         }
         //修改会员手机号
@@ -328,7 +332,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         checkMember(memberAddDTO.getUsername(), memberAddDTO.getMobile());
 
         //添加会员
-        Member member = new Member(memberAddDTO.getUsername(), memberAddDTO.getPassword(), memberAddDTO.getMobile());
+        Member member = new Member(memberAddDTO.getUsername(), new BCryptPasswordEncoder().encode(memberAddDTO.getPassword()), memberAddDTO.getMobile());
         this.save(member);
         String destination = rocketmqCustomProperties.getMemberTopic() + ":" + MemberTagsEnum.MEMBER_REGISTER.name();
         rocketMQTemplate.asyncSend(destination, member, RocketmqSendCallbackBuilder.commonCallback());
@@ -376,18 +380,26 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
     @Override
     @PointLogPoint
-    public Boolean updateMemberPoint(Long point, Boolean type, String memberId, String content) {
+    public Boolean updateMemberPoint(Long point, String type, String memberId, String content) {
         //获取当前会员信息
         Member member = this.getById(memberId);
         if (member != null) {
             //积分变动后的会员积分
             long currentPoint;
-            if (type) {
-                currentPoint = CurrencyUtil.add(member.getPoint(), point).longValue();
-            } else {
-                currentPoint = CurrencyUtil.sub(member.getPoint(), point) < 0 ? 0 : new Double(CurrencyUtil.sub(member.getPoint(), point)).longValue();
+            //会员总获得积分
+            long totalPoint = member.getTotalPoint();
+            //如果增加积分
+            if (type.equals(PointTypeEnum.INCREASE.name())) {
+                currentPoint = member.getPoint() + point;
+                //如果是增加积分 需要增加总获得积分
+                totalPoint = totalPoint + point;
+            }
+            //否则扣除积分
+            else {
+                currentPoint = member.getPoint() - point < 0 ? 0 : member.getPoint() - point;
             }
             member.setPoint(currentPoint);
+            member.setTotalPoint(totalPoint);
             Boolean result = this.updateById(member);
             if (result) {
                 //发送会员消息
@@ -404,26 +416,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         }
         throw new ServiceException(ResultCode.USER_NOT_EXIST);
     }
-
-    @Override
-    public Boolean updateMemberExperience(Long experience, Boolean type, String memberId, String content) {
-        //获取当前会员信息
-        Member member = this.getById(memberId);
-        if (member != null) {
-            //积分变动后的会员积分
-            long currentExperience;
-            if (type) {
-                currentExperience = CurrencyUtil.add(member.getPoint(), experience).longValue();
-            } else {
-                currentExperience = CurrencyUtil.sub(member.getPoint(), experience) < 0 ? 0 : new Double(CurrencyUtil.sub(member.getExperience(), experience)).longValue();
-            }
-            member.setExperience(currentExperience);
-
-            return this.updateById(member);
-        }
-        throw new ServiceException(ResultCode.USER_NOT_EXIST);
-    }
-
 
     @Override
     public Boolean updateMemberStatus(List<String> memberIds, Boolean status) {
@@ -576,7 +568,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         queryWrapper.like(StringUtils.isNotBlank(memberSearchVO.getMobile()), "mobile", memberSearchVO.getMobile());
         //按照状态查询
         queryWrapper.eq(StringUtils.isNotBlank(memberSearchVO.getDisabled()), "disabled",
-                memberSearchVO.getDisabled().equals(SwitchEnum.OPEN.name()) ? 1 : 0);        queryWrapper.orderByDesc("create_time");
+                memberSearchVO.getDisabled().equals(SwitchEnum.OPEN.name()) ? 1 : 0);
+        queryWrapper.orderByDesc("create_time");
         return this.count(queryWrapper);
     }
 

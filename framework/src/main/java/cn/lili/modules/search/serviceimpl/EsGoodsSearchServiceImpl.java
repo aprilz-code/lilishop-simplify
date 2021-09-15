@@ -2,23 +2,18 @@ package cn.lili.modules.search.serviceimpl;
 
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.util.ArrayUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
-import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
-import cn.lili.modules.goods.entity.dos.Brand;
-import cn.lili.modules.goods.entity.dos.Category;
 import cn.lili.modules.goods.entity.enums.GoodsAuthEnum;
 import cn.lili.modules.goods.entity.enums.GoodsStatusEnum;
-import cn.lili.modules.goods.service.BrandService;
-import cn.lili.modules.goods.service.CategoryService;
 import cn.lili.modules.search.entity.dos.EsGoodsIndex;
 import cn.lili.modules.search.entity.dos.EsGoodsRelatedInfo;
 import cn.lili.modules.search.entity.dto.EsGoodsSearchDTO;
 import cn.lili.modules.search.entity.dto.HotWordsDTO;
 import cn.lili.modules.search.entity.dto.ParamOptions;
 import cn.lili.modules.search.entity.dto.SelectorOptions;
-import cn.lili.modules.search.repository.EsGoodsIndexRepository;
 import cn.lili.modules.search.service.EsGoodsSearchService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.search.join.ScoreMode;
@@ -28,21 +23,19 @@ import org.elasticsearch.index.query.Operator;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
-import org.elasticsearch.search.aggregations.Aggregation;
-import org.elasticsearch.search.aggregations.AggregationBuilder;
-import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.*;
 import org.elasticsearch.search.aggregations.bucket.nested.ParsedNested;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.data.elasticsearch.core.SearchHitSupport;
 import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.SearchPage;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.data.redis.core.DefaultTypedTuple;
@@ -63,21 +56,10 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
     private static final String ATTR_PATH = "attrList";
     private static final String ATTR_VALUE = "attrList.value";
     private static final String ATTR_NAME = "attrList.name";
+    private static final String ATTR_SORT = "attrList.sort";
+    private static final String ATTR_BRAND_ID = "brandId";
     private static final String ATTR_NAME_KEY = "nameList";
     private static final String ATTR_VALUE_KEY = "valueList";
-
-    @Autowired
-    private EsGoodsIndexRepository goodsIndexRepository;
-    /**
-     * 商品分类
-     */
-    @Autowired
-    private CategoryService categoryService;
-    /**
-     * 品牌
-     */
-    @Autowired
-    private BrandService brandService;
     /**
      * ES
      */
@@ -90,22 +72,30 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
     private Cache cache;
 
     @Override
-    public Page<EsGoodsIndex> searchGoods(EsGoodsSearchDTO searchDTO, PageVO pageVo) {
+    public SearchPage<EsGoodsIndex> searchGoods(EsGoodsSearchDTO searchDTO, PageVO pageVo) {
         if (CharSequenceUtil.isNotEmpty(searchDTO.getKeyword())) {
             cache.incrementScore(CachePrefix.HOT_WORD.getPrefix(), searchDTO.getKeyword());
         }
         NativeSearchQueryBuilder searchQueryBuilder = createSearchQueryBuilder(searchDTO, pageVo, true);
         NativeSearchQuery searchQuery = searchQueryBuilder.build();
         log.info("searchGoods DSL:{}", searchQuery.getQuery());
-
-        return goodsIndexRepository.search(searchQuery);
+        SearchHits<EsGoodsIndex> search = restTemplate.search(searchQuery, EsGoodsIndex.class);
+        return SearchHitSupport.searchPageFor(search, searchQuery.getPageable());
     }
 
     @Override
-    public List<String> getHotWords(Integer start, Integer end) {
+    public List<String> getHotWords(Integer count) {
+        if (count == null) {
+            count = 0;
+        }
         List<String> hotWords = new ArrayList<>();
-        Set<DefaultTypedTuple> set = cache.reverseRangeWithScores(CachePrefix.HOT_WORD.getPrefix(), start, end);
-        for (DefaultTypedTuple defaultTypedTuple : set) {
+        // redis 排序中，下标从0开始，所以这里需要 -1 处理
+        count = count - 1;
+        Set<DefaultTypedTuple<Object>> set = cache.reverseRangeWithScores(CachePrefix.HOT_WORD.getPrefix(), count);
+        if (set == null || set.isEmpty()) {
+            return new ArrayList<>();
+        }
+        for (DefaultTypedTuple<Object> defaultTypedTuple : set) {
             hotWords.add(Objects.requireNonNull(defaultTypedTuple.getValue()).toString());
         }
         return hotWords;
@@ -120,12 +110,18 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
     public EsGoodsRelatedInfo getSelector(EsGoodsSearchDTO goodsSearch, PageVO pageVo) {
         NativeSearchQueryBuilder builder = createSearchQueryBuilder(goodsSearch, null, true);
         //分类
-        builder.addAggregation(AggregationBuilders.terms("categoryAgg").field("categoryPath"));
+        AggregationBuilder categoryNameBuilder = AggregationBuilders.terms("categoryNameAgg").field("categoryNamePath.keyword");
+        builder.addAggregation(AggregationBuilders.terms("categoryAgg").field("categoryPath").subAggregation(categoryNameBuilder));
+
         //品牌
-        builder.addAggregation(AggregationBuilders.terms("brandAgg").field("brandId").size(Integer.MAX_VALUE));
+        AggregationBuilder brandNameBuilder = AggregationBuilders.terms("brandNameAgg").field("brandName.keyword");
+        builder.addAggregation(AggregationBuilders.terms("brandIdNameAgg").field(ATTR_BRAND_ID).size(Integer.MAX_VALUE).subAggregation(brandNameBuilder));
+        AggregationBuilder brandUrlBuilder = AggregationBuilders.terms("brandUrlAgg").field("brandUrl.keyword");
+        builder.addAggregation(AggregationBuilders.terms("brandIdUrlAgg").field(ATTR_BRAND_ID).size(Integer.MAX_VALUE).subAggregation(brandUrlBuilder));
         //参数
         AggregationBuilder valuesBuilder = AggregationBuilders.terms("valueAgg").field(ATTR_VALUE);
-        AggregationBuilder paramsNameBuilder = AggregationBuilders.terms("nameAgg").field(ATTR_NAME).subAggregation(valuesBuilder);
+        AggregationBuilder sortBuilder = AggregationBuilders.sum("sortAgg").field(ATTR_SORT);
+        AggregationBuilder paramsNameBuilder = AggregationBuilders.terms("nameAgg").field(ATTR_NAME).subAggregation(sortBuilder).order(BucketOrder.aggregation("sortAgg", false)).subAggregation(valuesBuilder);
         builder.addAggregation(AggregationBuilders.nested("attrAgg", ATTR_PATH).subAggregation(paramsNameBuilder));
         NativeSearchQuery searchQuery = builder.build();
         SearchHits<EsGoodsIndex> search = restTemplate.search(searchQuery, EsGoodsIndex.class);
@@ -158,18 +154,22 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
         if (categoryBuckets != null && !categoryBuckets.isEmpty()) {
             for (Terms.Bucket categoryBucket : categoryBuckets) {
                 String categoryPath = categoryBucket.getKey().toString();
-                String[] split = categoryPath.split(",");
-                for (String s : split) {
-                    if (CharSequenceUtil.isNotEmpty(s)) {
-                        Category category = categoryService.getById(s);
-                        if (category != null) {
-                            SelectorOptions so = new SelectorOptions();
-                            so.setName(category.getName());
-                            so.setValue(category.getId());
-                            if (!categoryOptions.contains(so)) {
-                                categoryOptions.add(so);
-                            }
-                        }
+                ParsedStringTerms categoryNameAgg = categoryBucket.getAggregations().get("categoryNameAgg");
+                List<? extends Terms.Bucket> categoryNameBuckets = categoryNameAgg.getBuckets();
+
+
+                String categoryNamePath = categoryPath;
+                if (!categoryBuckets.isEmpty()) {
+                    categoryNamePath = categoryNameBuckets.get(0).getKey().toString();
+                }
+                String[] split = ArrayUtil.distinct(categoryPath.split(","));
+                String[] nameSplit = categoryNamePath.split(",");
+                for (int i = 0; i < split.length; i++) {
+                    SelectorOptions so = new SelectorOptions();
+                    so.setName(nameSplit[i]);
+                    so.setValue(split[i]);
+                    if (!categoryOptions.contains(so)) {
+                        categoryOptions.add(so);
                     }
                 }
 
@@ -178,25 +178,47 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
         esGoodsRelatedInfo.setCategories(categoryOptions);
 
         //品牌
-        ParsedStringTerms brandTerms = (ParsedStringTerms) aggregationMap.get("brandAgg");
-        List<? extends Terms.Bucket> brandBuckets = brandTerms.getBuckets();
+        ParsedStringTerms brandNameTerms = (ParsedStringTerms) aggregationMap.get("brandIdNameAgg");
+        ParsedStringTerms brandUrlTerms = (ParsedStringTerms) aggregationMap.get("brandIdUrlAgg");
+        List<? extends Terms.Bucket> brandBuckets = brandNameTerms.getBuckets();
+        List<? extends Terms.Bucket> brandUrlBuckets = brandUrlTerms.getBuckets();
         List<SelectorOptions> brandOptions = new ArrayList<>();
         if (brandBuckets != null && !brandBuckets.isEmpty()) {
-            for (Terms.Bucket brandBucket : brandBuckets) {
+            for (int i = 0; i < brandBuckets.size(); i++) {
+                String brandId = brandBuckets.get(i).getKey().toString();
                 if (CharSequenceUtil.isNotEmpty(goodsSearch.getBrandId())) {
                     List<String> brandList = Arrays.asList(goodsSearch.getBrandId().split("@"));
-                    if (brandList.contains(brandBucket.getKey().toString())) {
+                    if (brandList.contains(brandId)) {
                         continue;
                     }
                 }
-                Brand brand = brandService.getById(brandBucket.getKey().toString());
-                if (brand != null) {
-                    SelectorOptions so = new SelectorOptions();
-                    so.setName(brand.getName());
-                    so.setValue(brand.getId());
-                    so.setUrl(brand.getLogo());
-                    brandOptions.add(so);
+
+                String brandName = "";
+                if (brandBuckets.get(i).getAggregations() != null && brandBuckets.get(i).getAggregations().get("brandNameAgg") != null) {
+                    ParsedStringTerms brandNameAgg = brandBuckets.get(i).getAggregations().get("brandNameAgg");
+                    List<? extends Terms.Bucket> categoryNameBuckets = brandNameAgg.getBuckets();
+                    if (categoryNameBuckets != null && !categoryNameBuckets.isEmpty()) {
+                        brandName = categoryNameBuckets.get(0).getKey().toString();
+                    }
                 }
+
+                String brandUrl = "";
+                if (brandUrlBuckets != null && !brandUrlBuckets.isEmpty() &&
+                        brandUrlBuckets.get(i).getAggregations() != null &&
+                        brandUrlBuckets.get(i).getAggregations().get("brandUrlAgg") != null) {
+
+                    ParsedStringTerms brandUrlAgg = brandUrlBuckets.get(i).getAggregations().get("brandUrlAgg");
+                    List<? extends Terms.Bucket> categoryUrlBuckets = brandUrlAgg.getBuckets();
+                    if (categoryUrlBuckets != null && !categoryUrlBuckets.isEmpty()) {
+                        brandUrl = categoryUrlBuckets.get(0).getKey().toString();
+                    }
+
+                }
+                SelectorOptions so = new SelectorOptions();
+                so.setName(brandName);
+                so.setValue(brandId);
+                so.setUrl(brandUrl);
+                brandOptions.add(so);
             }
         }
         esGoodsRelatedInfo.setBrands(brandOptions);
@@ -273,7 +295,7 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
     private NativeSearchQueryBuilder createSearchQueryBuilder(EsGoodsSearchDTO searchDTO, PageVO pageVo, boolean isAggregation) {
         NativeSearchQueryBuilder nativeSearchQueryBuilder = new NativeSearchQueryBuilder();
         if (pageVo != null) {
-            Integer pageNumber = pageVo.getPageNumber() - 1;
+            int pageNumber = pageVo.getPageNumber() - 1;
             if (pageNumber < 0) {
                 pageNumber = 0;
             }
@@ -298,7 +320,7 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
 
 
             //关键字检索
-            if (StringUtils.isEmpty(searchDTO.getKeyword())) {
+            if (CharSequenceUtil.isEmpty(searchDTO.getKeyword())) {
                 nativeSearchQueryBuilder.withQuery(QueryBuilders.matchAllQuery());
             } else {
                 this.keywordSearch(filterBuilder, queryBuilder, searchDTO.getKeyword(), isAggregation);
@@ -326,16 +348,19 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
     /**
      * 查询属性处理
      *
-     * @param filterBuilder
-     * @param queryBuilder
-     * @param searchDTO
-     * @param isAggregation
+     * @param filterBuilder 过滤构造器
+     * @param queryBuilder  查询构造器
+     * @param searchDTO     查询参数
+     * @param isAggregation 是否为聚合查询
      */
     private void commonSearch(BoolQueryBuilder filterBuilder, BoolQueryBuilder queryBuilder, EsGoodsSearchDTO searchDTO, boolean isAggregation) {
         //品牌判定
         if (CharSequenceUtil.isNotEmpty(searchDTO.getBrandId())) {
             String[] brands = searchDTO.getBrandId().split("@");
-            filterBuilder.must(QueryBuilders.termsQuery("brandId", brands));
+            filterBuilder.must(QueryBuilders.termsQuery(ATTR_BRAND_ID, brands));
+        }
+        if (searchDTO.getRecommend() != null) {
+            filterBuilder.filter(QueryBuilders.termQuery("storeId", searchDTO.getRecommend()));
         }
         //规格项判定
         if (searchDTO.getNameIds() != null && !searchDTO.getNameIds().isEmpty()) {
@@ -415,10 +440,10 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
     /**
      * 关键字查询处理
      *
-     * @param filterBuilder
-     * @param queryBuilder
-     * @param keyword
-     * @param isAggregation
+     * @param filterBuilder 过滤构造器
+     * @param queryBuilder  查询构造器
+     * @param keyword       关键字
+     * @param isAggregation 是否为聚合查询
      */
     private void keywordSearch(BoolQueryBuilder filterBuilder, BoolQueryBuilder queryBuilder, String keyword, boolean isAggregation) {
         List<FunctionScoreQueryBuilder.FilterFunctionBuilder> filterFunctionBuilders = new ArrayList<>();

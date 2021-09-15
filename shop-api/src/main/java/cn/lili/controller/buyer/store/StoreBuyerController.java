@@ -27,7 +27,7 @@ import java.util.List;
  * 买家端,店铺接口
  *
  * @author Bulbasaur
- * @since: 2020/11/17 2:32 下午
+ * @since 2020/11/17 2:32 下午
  */
 @RestController
 @RequestMapping("/buyer/store")
@@ -61,6 +61,13 @@ public class StoreBuyerController {
     @GetMapping(value = "/get/detail/{id}")
     public ResultMessage<StoreBasicInfoVO> detail(@NotNull @PathVariable String id) {
         return ResultUtil.data(storeDetailService.getStoreBasicInfoDTO(id));
+    }
+
+    @ApiOperation(value = "通过id获取店铺详细信息-营业执照")
+    @ApiImplicitParam(name = "id", value = "店铺ID", required = true, paramType = "path")
+    @GetMapping(value = "/get/licencePhoto/{id}")
+    public ResultMessage<StoreOtherVO> licencePhoto(@NotNull @PathVariable String id) {
+        return ResultUtil.data(storeDetailService.getStoreOtherVO(id));
     }
 
     @ApiOperation(value = "通过id获取店铺商品分类")

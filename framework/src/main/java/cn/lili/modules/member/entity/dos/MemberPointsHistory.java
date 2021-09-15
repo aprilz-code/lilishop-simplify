@@ -1,9 +1,9 @@
 package cn.lili.modules.member.entity.dos;
 
 
+import cn.lili.mybatis.BaseIdEntity;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
@@ -13,12 +13,6 @@ import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.format.annotation.DateTimeFormat;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 import java.util.Date;
 
 /**
@@ -28,20 +22,11 @@ import java.util.Date;
  * @since 2020-02-25 14:10:16
  */
 @Data
-@Entity
-@Table(name = "li_member_points_history")
 @TableName("li_member_points_history")
 @ApiModel(value = "会员积分历史")
-public class MemberPointsHistory {
+public class MemberPointsHistory extends BaseIdEntity {
 
     private static final long serialVersionUID = 1L;
-
-    @Id
-    @TableId
-    @TableField
-    @Column(columnDefinition = "bigint(20)")
-    @ApiModelProperty(value = "唯一标识", hidden = true)
-    private String id;
 
     @CreatedBy
     @TableField(fill = FieldFill.INSERT)
@@ -50,7 +35,7 @@ public class MemberPointsHistory {
 
     @CreatedDate
     @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
-  @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @TableField(fill = FieldFill.INSERT)
     @ApiModelProperty(value = "创建时间", hidden = true)
     private Date createTime;
@@ -67,7 +52,7 @@ public class MemberPointsHistory {
     @ApiModelProperty(value = "消费之前积分")
     private Long beforePoint;
 
-    @ApiModelProperty(value = "消费积分")
+    @ApiModelProperty(value = "变动积分")
     private Long variablePoint;
 
     @ApiModelProperty(value = "content")
@@ -76,7 +61,7 @@ public class MemberPointsHistory {
     /**
      * @see cn.lili.modules.member.entity.enums.PointTypeEnum
      */
-    @ApiModelProperty(value = "消费积分类型")
+    @ApiModelProperty(value = "积分类型")
     private String pointType;
 
 }

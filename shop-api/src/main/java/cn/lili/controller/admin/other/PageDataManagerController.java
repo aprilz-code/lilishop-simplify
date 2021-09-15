@@ -3,7 +3,6 @@ package cn.lili.controller.admin.other;
 import cn.lili.common.enums.ResultUtil;
 import cn.lili.common.vo.PageVO;
 import cn.lili.common.vo.ResultMessage;
-import cn.lili.modules.system.aspect.annotation.DemoSite;
 import cn.lili.modules.page.entity.dos.PageData;
 import cn.lili.modules.page.entity.dto.PageDataDTO;
 import cn.lili.modules.page.entity.vos.PageDataListVO;

@@ -3,13 +3,13 @@ package cn.lili.modules.promotion.serviceimpl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.trigger.util.DelayQueueTools;
-import cn.lili.trigger.enums.DelayTypeEnums;
-import cn.lili.trigger.message.PromotionMessage;
+import cn.lili.consumer.trigger.util.DelayQueueTools;
+import cn.lili.consumer.trigger.enums.DelayTypeEnums;
+import cn.lili.consumer.trigger.message.PromotionMessage;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.trigger.interfaces.TimeTrigger;
-import cn.lili.trigger.model.TimeExecuteConstant;
-import cn.lili.trigger.model.TimeTriggerMsg;
+import cn.lili.consumer.trigger.interfaces.TimeTrigger;
+import cn.lili.consumer.trigger.model.TimeExecuteConstant;
+import cn.lili.consumer.trigger.model.TimeTriggerMsg;
 import cn.lili.common.utils.DateUtil;
 import cn.lili.mybatis.util.PageUtil;
 import cn.lili.common.vo.PageVO;
@@ -206,7 +206,6 @@ public class PintuanServiceImpl extends ServiceImpl<PintuanMapper, Pintuan> impl
     @Override
     public boolean addPintuan(PintuanVO pintuan) {
         PromotionTools.checkPromotionTime(pintuan.getStartTime().getTime(), pintuan.getEndTime().getTime());
-        this.checkSamePromotion(pintuan.getStartTime(), pintuan.getEndTime(), pintuan.getStoreId(), null);
         pintuan.setPromotionStatus(PromotionStatusEnum.NEW.name());
         //保存到MYSQL中
         boolean result = this.save(pintuan);
@@ -224,8 +223,6 @@ public class PintuanServiceImpl extends ServiceImpl<PintuanMapper, Pintuan> impl
         }
         //检查促销时间
         PromotionTools.checkPromotionTime(pintuan.getStartTime().getTime(), pintuan.getEndTime().getTime());
-        //检查同一时间，同一店铺，同一类型的促销活动
-        this.checkSamePromotion(pintuan.getStartTime(), pintuan.getEndTime(), pintuan.getStoreId(), pintuan.getId());
         boolean result = this.updateById(pintuan);
         if (pintuan.getPromotionGoodsList() != null) {
             this.updatePintuanPromotionGoods(pintuan);
@@ -393,14 +390,10 @@ public class PintuanServiceImpl extends ServiceImpl<PintuanMapper, Pintuan> impl
         }
     }
 
-    private void checkSamePromotion(Date startTime, Date endTime, String storeId, String pintuanId) {
-        QueryWrapper<Pintuan> queryWrapper = PromotionTools.checkActiveTime(startTime, endTime, PromotionTypeEnum.PINTUAN, storeId, pintuanId);
-        List<Pintuan> list = this.list(queryWrapper);
-        if (!list.isEmpty()) {
-            throw new ServiceException(ResultCode.PROMOTION_SAME_ERROR);
-        }
-    }
-
+    /**
+     * 增加拼团定时任务
+     * @param pintuan
+     */
     private void addPintuanStartTask(PintuanVO pintuan) {
         PromotionMessage promotionMessage = new PromotionMessage(pintuan.getId(), PromotionTypeEnum.PINTUAN.name(), PromotionStatusEnum.START.name(), pintuan.getStartTime(), pintuan.getEndTime());
         TimeTriggerMsg timeTriggerMsg = new TimeTriggerMsg(TimeExecuteConstant.PROMOTION_EXECUTOR,

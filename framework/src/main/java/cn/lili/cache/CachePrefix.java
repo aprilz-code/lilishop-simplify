@@ -125,9 +125,13 @@ public enum CachePrefix {
     GOODS_STOCK,
 
     /**
-     * 商品分类
+     * 商品分类 树状结构
      */
     CATEGORY,
+    /**
+     * 商品分类 集合
+     */
+    CATEGORY_ARRAY,
     /**
      * 浏览次数
      */
@@ -452,9 +456,23 @@ public enum CachePrefix {
     ARTICLE_CACHE,
 
     /**
+     * 初始化索引
+     */
+    INIT_INDEX_PROCESS,
+
+    /**
+     * 初始化索引标示
+     */
+    INIT_INDEX_FLAG,
+
+    /**
      * 店铺分类
      */
-    STORE_CATEGORY;
+    STORE_CATEGORY,
+    /**
+     * 订单暂时缓存
+     */
+    ORDER;
 
 
     public static String removePrefix(String str) {

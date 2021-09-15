@@ -1,6 +1,10 @@
 package cn.lili.modules.member.serviceimpl;
 
 
+import cn.lili.modules.member.entity.dos.Member;
+import cn.lili.modules.member.entity.enums.PointTypeEnum;
+import cn.lili.modules.member.mapper.MemberMapper;
+import cn.lili.modules.member.service.MemberService;
 import cn.lili.mybatis.util.PageUtil;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
@@ -9,9 +13,14 @@ import cn.lili.modules.member.entity.vo.MemberPointsHistoryVO;
 import cn.lili.modules.member.mapper.MemberPointsHistoryMapper;
 import cn.lili.modules.member.service.MemberPointsHistoryService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 会员积分历史业务层实现
@@ -22,24 +31,21 @@ import org.springframework.stereotype.Service;
 @Service
 public class MemberPointsHistoryServiceImpl extends ServiceImpl<MemberPointsHistoryMapper, MemberPointsHistory> implements MemberPointsHistoryService {
 
+
+    @Autowired
+    private MemberService memberService;
+
     @Override
     public MemberPointsHistoryVO getMemberPointsHistoryVO(String memberId) {
+        //获取会员积分历史
+        Member member = memberService.getById(memberId);
         MemberPointsHistoryVO memberPointsHistoryVO = new MemberPointsHistoryVO();
-        Long point = 0L;
-        Long variablePoint = 0L;
-
-        if (StringUtils.isNotEmpty(memberId)) {
-            point = this.baseMapper.getMemberPointsHistoryVO(1, memberId);
-            variablePoint = this.baseMapper.getMemberPointsHistoryVO(0, memberId);
-
-        } else {
-            point = this.baseMapper.getALLMemberPointsHistoryVO(0);
-            variablePoint = this.baseMapper.getALLMemberPointsHistoryVO(1);
+        if (member != null) {
+            memberPointsHistoryVO.setPoint(member.getPoint());
+            memberPointsHistoryVO.setTotalPoint(member.getTotalPoint());
+            return memberPointsHistoryVO;
         }
-        memberPointsHistoryVO.setPoint(point == null ? 0 : point);
-        memberPointsHistoryVO.setVariablePoint(variablePoint == null ? 0 : variablePoint);
-        memberPointsHistoryVO.setVariablePoint(memberPointsHistoryVO.getPoint() - memberPointsHistoryVO.getVariablePoint());
-        return memberPointsHistoryVO;
+        return new MemberPointsHistoryVO();
     }
 
     @Override
@@ -54,4 +60,5 @@ public class MemberPointsHistoryServiceImpl extends ServiceImpl<MemberPointsHist
         }
         return this.page(PageUtil.initPage(page), lambdaQueryWrapper);
     }
+
 }

@@ -1,7 +1,6 @@
 package cn.lili.elasticsearch.config;
 
 import cn.hutool.core.convert.Convert;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -18,7 +17,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.elasticsearch.config.AbstractElasticsearchConfiguration;
 
-import javax.annotation.Nonnull;
 import javax.annotation.PreDestroy;
 import java.io.IOException;
 import java.util.List;
@@ -31,16 +29,15 @@ import java.util.List;
  **/
 @Slf4j
 @Configuration
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class ElasticsearchConfig extends AbstractElasticsearchConfiguration {
 
-    private final ElasticsearchProperties elasticsearchProperties;
+    @Autowired
+    private ElasticsearchProperties elasticsearchProperties;
 
     private RestHighLevelClient client;
 
     @Override
     @Bean
-    @Nonnull
     public RestHighLevelClient elasticsearchClient() {
         RestClientBuilder restBuilder = RestClient
                 .builder(this.getHttpHosts());

@@ -1,6 +1,5 @@
 package cn.lili.modules.member.entity.aop.interceptor;
 
-import cn.lili.common.utils.CurrencyUtil;
 import cn.lili.modules.member.entity.dos.Member;
 import cn.lili.modules.member.entity.dos.MemberPointsHistory;
 import cn.lili.modules.member.entity.enums.PointTypeEnum;
@@ -41,25 +40,35 @@ public class PointLogInterceptor {
                 point = Long.valueOf(obj[0].toString());
             }
             //变动类型
-            Boolean type = false;
+            String type = PointTypeEnum.INCREASE.name();
             if (obj[1] != null) {
-                type = Boolean.valueOf(obj[1].toString());
+                type = obj[1].toString();
             }
-            //会员ID
+            // 会员ID
             String memberId = "";
             if (obj[2] != null) {
                 memberId = obj[2].toString();
             }
+            // 变动积分为0，则直接返回
+            if (point == 0) {
+                return;
+            }
+
             //根据会员id查询会员信息
             Member member = memberService.getById(memberId);
             if (member != null) {
                 MemberPointsHistory memberPointsHistory = new MemberPointsHistory();
                 memberPointsHistory.setMemberId(member.getId());
                 memberPointsHistory.setMemberName(member.getUsername());
-                memberPointsHistory.setPointType(type ? PointTypeEnum.INCREASE.name() : PointTypeEnum.REDUCE.name());
+                memberPointsHistory.setPointType(type);
 
                 memberPointsHistory.setVariablePoint(point);
-                memberPointsHistory.setBeforePoint(true ? new Double(CurrencyUtil.sub(member.getPoint(), point)).longValue() : new Double(CurrencyUtil.add(member.getPoint(), point)).longValue());
+                if (type.equals(PointTypeEnum.INCREASE.name())) {
+                    memberPointsHistory.setBeforePoint(member.getPoint() - point);
+                } else {
+                    memberPointsHistory.setBeforePoint(member.getPoint() + point);
+                }
+
                 memberPointsHistory.setPoint(member.getPoint());
                 memberPointsHistory.setContent(obj[3] == null ? "" : obj[3].toString());
                 memberPointsHistory.setCreateBy("系统");

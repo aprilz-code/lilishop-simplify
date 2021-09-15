@@ -1,14 +1,13 @@
 package cn.lili.modules.goods.entity.dos;
 
-import cn.lili.mybatis.IdEntity;
+import cn.lili.mybatis.BaseIdEntity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.hibernate.validator.constraints.Length;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotEmpty;
@@ -20,12 +19,11 @@ import javax.validation.constraints.NotNull;
  * @author pikachu
  * @since 2020-02-23 9:14:33
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
-@Entity
-@Table(name = "li_parameters")
 @TableName("li_parameters")
 @ApiModel(value = "商品参数")
-public class Parameters extends IdEntity {
+public class Parameters extends BaseIdEntity {
 
 
 
