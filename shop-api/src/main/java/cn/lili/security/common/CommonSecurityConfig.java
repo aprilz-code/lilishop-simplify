@@ -44,6 +44,8 @@ public class CommonSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     private Cache<String> cache;
 
+    @Autowired
+    private CorsConfigurationSource corsConfigurationSource;
     @Override
     protected void configure(HttpSecurity http) throws Exception {
 
@@ -60,9 +62,6 @@ public class CommonSecurityConfig extends WebSecurityConfigurerAdapter {
                 //禁止网页iframe
                 .headers().frameOptions().disable()
                 .and()
-                .logout()
-                .permitAll()
-                .and()
                 .authorizeRequests()
                 //任何请求
                 .anyRequest()
@@ -70,7 +69,7 @@ public class CommonSecurityConfig extends WebSecurityConfigurerAdapter {
                 .authenticated()
                 .and()
                 //允许跨域
-                .cors().configurationSource((CorsConfigurationSource) SpringContextUtil.getBean("corsConfigurationSource")).and()
+                .cors().configurationSource(corsConfigurationSource).and()
                 //关闭跨站请求防护
                 .csrf().disable()
                 //前后端分离采用JWT 不需要session
@@ -78,8 +77,7 @@ public class CommonSecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 //自定义权限拒绝处理类
                 .exceptionHandling().accessDeniedHandler(accessDeniedHandler)
-                .and()
-                //添加JWT认证过滤器
+                .and()//添加JWT认证过滤器
                 .addFilter(new CommonAuthenticationFilter(authenticationManager(), cache));
     }
 
