@@ -1,4 +1,4 @@
-package cn.lili.security.buyer;
+package cn.lili.security.common;
 
 import cn.lili.cache.Cache;
 import cn.lili.common.properties.IgnoredUrlsProperties;
@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -27,8 +26,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @Slf4j
 @Configuration
 @EnableWebSecurity
-@Order(4)
-public class BuyerSecurityConfig extends WebSecurityConfigurerAdapter {
+@Order(3)
+public class CommonSecurityConfig extends WebSecurityConfigurerAdapter {
 
     /**
      * 忽略验权配置
@@ -57,6 +56,8 @@ public class BuyerSecurityConfig extends WebSecurityConfigurerAdapter {
         registry
                 .and()
                 //禁止网页iframe
+                .antMatcher("/common/**")
+                //禁止网页iframe
                 .headers().frameOptions().disable()
                 .and()
                 .logout()
@@ -79,7 +80,7 @@ public class BuyerSecurityConfig extends WebSecurityConfigurerAdapter {
                 .exceptionHandling().accessDeniedHandler(accessDeniedHandler)
                 .and()
                 //添加JWT认证过滤器
-                .addFilter(new BuyerAuthenticationFilter(authenticationManager(), cache));
+                .addFilter(new CommonAuthenticationFilter(authenticationManager(), cache));
     }
 
 
