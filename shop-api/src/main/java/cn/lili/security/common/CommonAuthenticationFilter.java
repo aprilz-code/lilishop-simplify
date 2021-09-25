@@ -99,7 +99,7 @@ public class CommonAuthenticationFilter extends BasicAuthenticationFilter {
             AuthUser authUser = new Gson().fromJson(json, AuthUser.class);
 
             //校验redis中是否有权限
-            if (cache.keys("*" + jwt).size() == 0) {
+            if (cache.keys("*" + jwt).size() > 0) {
                 //构造返回信息
                 List<GrantedAuthority> auths = new ArrayList<>();
                 auths.add(new SimpleGrantedAuthority("ROLE_" + authUser.getRole().name()));
