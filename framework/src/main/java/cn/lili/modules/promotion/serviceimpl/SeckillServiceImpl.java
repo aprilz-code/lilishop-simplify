@@ -26,12 +26,12 @@ import cn.lili.modules.system.entity.dto.SeckillSetting;
 import cn.lili.modules.system.entity.enums.SettingEnum;
 import cn.lili.modules.system.service.SettingService;
 import cn.lili.mybatis.util.PageUtil;
-import cn.lili.consumer.trigger.enums.DelayTypeEnums;
-import cn.lili.consumer.trigger.interfaces.TimeTrigger;
-import cn.lili.consumer.trigger.message.PromotionMessage;
-import cn.lili.consumer.trigger.model.TimeExecuteConstant;
-import cn.lili.consumer.trigger.model.TimeTriggerMsg;
-import cn.lili.consumer.trigger.util.DelayQueueTools;
+import cn.lili.trigger.enums.DelayTypeEnums;
+import cn.lili.trigger.interfaces.TimeTrigger;
+import cn.lili.trigger.message.PromotionMessage;
+import cn.lili.trigger.model.TimeExecuteConstant;
+import cn.lili.trigger.model.TimeTriggerMsg;
+import cn.lili.trigger.util.DelayQueueTools;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -187,6 +187,9 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillMapper, Seckill> impl
         SeckillVO seckill = checkSeckillExist(seckillVO.getId());
         if (PromotionStatusEnum.START.name().equals(seckillVO.getPromotionStatus())) {
             throw new ServiceException(ResultCode.PROMOTION_UPDATE_ERROR);
+        }
+        if (seckillVO.getEndTime() == null) {
+            seckillVO.setEndTime(cn.hutool.core.date.DateUtil.endOfDay(seckillVO.getStartTime()));
         }
         PromotionTools.checkPromotionTime(seckillVO.getStartTime().getTime(), seckillVO.getEndTime().getTime());
         //更新到MYSQL中

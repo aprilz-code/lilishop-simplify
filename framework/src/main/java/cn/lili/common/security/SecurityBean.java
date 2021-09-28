@@ -29,12 +29,6 @@ public class SecurityBean {
      *
      * @return bean
      */
-
-    /**
-     * 定义跨域配置
-     *
-     * @return bean
-     */
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

@@ -57,7 +57,7 @@ public class SeckillSearchParams implements Serializable {
     private String promotionStatus;
 
     /**
-     * @see cn.lili.modules.promotion.entity.enums.PromotionApplyStatusEnum
+     * @see PromotionApplyStatusEnum
      */
     @ApiModelProperty(value = "APPLY(\"申请\"), PASS(\"通过\"), REFUSE(\"拒绝\")")
     private String promotionApplyStatus;

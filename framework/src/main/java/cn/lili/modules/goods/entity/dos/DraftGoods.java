@@ -1,15 +1,17 @@
 package cn.lili.modules.goods.entity.dos;
 
-import cn.lili.mybatis.BaseEntity;
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.http.HtmlUtil;
 import cn.lili.modules.goods.entity.enums.DraftGoodsSaveType;
 import cn.lili.modules.goods.entity.enums.GoodsStatusEnum;
+import cn.lili.mybatis.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.hibernate.validator.constraints.Length;
 
 import javax.validation.constraints.Max;
 
@@ -19,6 +21,7 @@ import javax.validation.constraints.Max;
  * @author pikachu
  * @since 2020-02-23 9:14:33
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @TableName("li_draft_goods")
 @ApiModel(value = "草稿商品")
@@ -31,9 +34,10 @@ public class DraftGoods extends BaseEntity {
     @ApiModelProperty(value = "商品名称")
     private String goodsName;
 
-    @Length(max = 30, message = "商品规格编号太长，不能超过30个字符")
-    @ApiModelProperty(value = "商品编号")
-    private String sn;
+    @Max(value = 99999999, message = "价格不能超过99999999")
+    @ApiModelProperty(value = "商品价格")
+    private Double price;
+
 
     @ApiModelProperty(value = "品牌id")
     private String brandId;
@@ -47,9 +51,6 @@ public class DraftGoods extends BaseEntity {
     @ApiModelProperty(value = "卖点")
     private String sellingPoint;
 
-    @ApiModelProperty(value = "重量")
-    @Max(value = 99999999, message = "重量不能超过99999999")
-    private Double weight;
     /**
      * @see GoodsStatusEnum
      */
@@ -62,14 +63,6 @@ public class DraftGoods extends BaseEntity {
 
     @ApiModelProperty(value = "商品移动端详情")
     private String mobileIntro;
-
-    @Max(value = 99999999, message = "价格不能超过99999999")
-    @ApiModelProperty(value = "商品价格")
-    private Double price;
-
-    @Max(value = 99999999, message = "成本价格99999999")
-    @ApiModelProperty(value = "成本价格")
-    private Double cost;
 
     @ApiModelProperty(value = "购买数量")
     private Integer buyCount;
@@ -137,7 +130,7 @@ public class DraftGoods extends BaseEntity {
 
     @ApiModelProperty(value = "商品图片JSON")
     private String goodsGalleryListJson;
- 
+
     @ApiModelProperty(value = "sku列表JSON")
     private String skuListJson;
 
@@ -146,5 +139,19 @@ public class DraftGoods extends BaseEntity {
      */
     @ApiModelProperty(value = "商品类型", required = true)
     private String goodsType;
+
+    public String getIntro() {
+        if (CharSequenceUtil.isNotEmpty(intro)) {
+            return HtmlUtil.unescape(intro);
+        }
+        return intro;
+    }
+
+    public String getMobileIntro() {
+        if (CharSequenceUtil.isNotEmpty(mobileIntro)) {
+            return HtmlUtil.unescape(mobileIntro);
+        }
+        return mobileIntro;
+    }
 
 }

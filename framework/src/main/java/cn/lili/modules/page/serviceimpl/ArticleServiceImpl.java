@@ -5,13 +5,13 @@ import cn.hutool.core.util.StrUtil;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.utils.BeanUtil;
-import cn.lili.mybatis.util.PageUtil;
 import cn.lili.modules.page.entity.dos.Article;
 import cn.lili.modules.page.entity.dto.ArticleSearchParams;
 import cn.lili.modules.page.entity.enums.ArticleEnum;
 import cn.lili.modules.page.entity.vos.ArticleVO;
 import cn.lili.modules.page.mapper.ArticleMapper;
 import cn.lili.modules.page.service.ArticleService;
+import cn.lili.mybatis.util.PageUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -34,9 +34,17 @@ import java.util.List;
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> implements ArticleService {
 
     @Override
-    public IPage<ArticleVO> articlePage(ArticleSearchParams articleSearchParams) {
+    public IPage<ArticleVO> managerArticlePage(ArticleSearchParams articleSearchParams) {
         articleSearchParams.setSort("a.sort");
         return this.baseMapper.getArticleList(PageUtil.initPage(articleSearchParams), articleSearchParams.queryWrapper());
+    }
+
+    @Override
+    public IPage<ArticleVO> articlePage(ArticleSearchParams articleSearchParams) {
+        articleSearchParams.setSort("a.sort");
+        QueryWrapper queryWrapper = articleSearchParams.queryWrapper();
+        queryWrapper.eq("open_status",true);
+        return this.baseMapper.getArticleList(PageUtil.initPage(articleSearchParams), queryWrapper);
     }
 
     @Override

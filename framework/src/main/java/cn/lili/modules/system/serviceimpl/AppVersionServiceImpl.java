@@ -2,7 +2,6 @@ package cn.lili.modules.system.serviceimpl;
 
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.modules.goods.entity.dos.Brand;
 import cn.lili.modules.system.entity.dos.AppVersion;
 import cn.lili.modules.system.mapper.AppVersionMapper;
 import cn.lili.modules.system.service.AppVersionService;

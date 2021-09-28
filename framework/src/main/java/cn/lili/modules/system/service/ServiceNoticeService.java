@@ -1,7 +1,7 @@
 package cn.lili.modules.system.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import cn.lili.modules.system.entity.dos.ServiceNotice;
+import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
  * 服务订阅消息业务层

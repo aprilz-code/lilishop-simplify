@@ -22,12 +22,12 @@ import cn.lili.modules.promotion.mapper.KanJiaActivityGoodsMapper;
 import cn.lili.modules.promotion.service.KanjiaActivityGoodsService;
 import cn.lili.modules.promotion.tools.PromotionTools;
 import cn.lili.mybatis.util.PageUtil;
-import cn.lili.consumer.trigger.enums.DelayTypeEnums;
-import cn.lili.consumer.trigger.interfaces.TimeTrigger;
-import cn.lili.consumer.trigger.message.PromotionMessage;
-import cn.lili.consumer.trigger.model.TimeExecuteConstant;
-import cn.lili.consumer.trigger.model.TimeTriggerMsg;
-import cn.lili.consumer.trigger.util.DelayQueueTools;
+import cn.lili.trigger.enums.DelayTypeEnums;
+import cn.lili.trigger.interfaces.TimeTrigger;
+import cn.lili.trigger.message.PromotionMessage;
+import cn.lili.trigger.model.TimeExecuteConstant;
+import cn.lili.trigger.model.TimeTriggerMsg;
+import cn.lili.trigger.util.DelayQueueTools;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -185,7 +185,7 @@ public class KanjiaActivityGoodsServiceImpl extends ServiceImpl<KanJiaActivityGo
         }
         //校验活动库存是否超出此sku的库存
         if (goodsSku.getQuantity() < kanJiaActivityGoodsDTO.getStock()) {
-            throw new ServiceException(ResultCode.POINT_GOODS_ACTIVE_STOCK_ERROR);
+            throw new ServiceException(ResultCode.KANJIA_GOODS_ACTIVE_STOCK_ERROR);
         }
         //校验最低购买金额不能高于商品金额
         if (goodsSku.getPrice() < kanJiaActivityGoodsDTO.getPurchasePrice()) {

@@ -1,26 +1,20 @@
 package cn.lili.modules.member.serviceimpl;
 
 
-import cn.lili.modules.member.entity.dos.Member;
-import cn.lili.modules.member.entity.enums.PointTypeEnum;
-import cn.lili.modules.member.mapper.MemberMapper;
-import cn.lili.modules.member.service.MemberService;
-import cn.lili.mybatis.util.PageUtil;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
+import cn.lili.modules.member.entity.dos.Member;
 import cn.lili.modules.member.entity.dos.MemberPointsHistory;
 import cn.lili.modules.member.entity.vo.MemberPointsHistoryVO;
 import cn.lili.modules.member.mapper.MemberPointsHistoryMapper;
 import cn.lili.modules.member.service.MemberPointsHistoryService;
+import cn.lili.modules.member.service.MemberService;
+import cn.lili.mybatis.util.PageUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 会员积分历史业务层实现

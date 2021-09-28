@@ -3,7 +3,6 @@ package cn.lili.modules.promotion.serviceimpl;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.security.context.UserContext;
-import cn.lili.mybatis.util.PageUtil;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.promotion.entity.dos.Coupon;
 import cn.lili.modules.promotion.entity.dos.MemberCoupon;
@@ -14,6 +13,7 @@ import cn.lili.modules.promotion.entity.vos.CouponSearchParams;
 import cn.lili.modules.promotion.mapper.MemberCouponMapper;
 import cn.lili.modules.promotion.service.CouponService;
 import cn.lili.modules.promotion.service.MemberCouponService;
+import cn.lili.mybatis.util.PageUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -88,12 +88,12 @@ public class MemberCouponServiceImpl extends ServiceImpl<MemberCouponMapper, Mem
 
     @Override
     public List<MemberCoupon> getMemberCoupons() {
-        QueryWrapper<MemberCoupon> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("member_id", UserContext.getCurrentUser().getId());
-        queryWrapper.ge("member_coupon_status", MemberCouponStatusEnum.NEW.name());
-        queryWrapper.ge("start_time", System.currentTimeMillis());
-        queryWrapper.le("end_time", System.currentTimeMillis());
-        return this.list(queryWrapper);
+        LambdaQueryWrapper<MemberCoupon> LambdaQueryWrapper = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper.eq(MemberCoupon::getMemberId,UserContext.getCurrentUser().getId());
+        LambdaQueryWrapper.eq(MemberCoupon::getMemberCouponStatus,MemberCouponStatusEnum.NEW.name());
+        LambdaQueryWrapper.le(MemberCoupon::getStartTime,new Date());
+        LambdaQueryWrapper.ge(MemberCoupon::getEndTime,new Date());
+        return this.list(LambdaQueryWrapper);
     }
 
     /**

@@ -7,19 +7,20 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
+import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.enums.ResultUtil;
 import cn.lili.common.exception.ServiceException;
+import cn.lili.common.properties.ApiProperties;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.CurrencyUtil;
 import cn.lili.common.utils.SnowFlake;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.ResultMessage;
-import cn.lili.common.properties.ApiProperties;
-import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.modules.connect.entity.Connect;
 import cn.lili.modules.connect.entity.enums.ConnectEnum;
 import cn.lili.modules.connect.service.ConnectService;
+import cn.lili.modules.order.order.service.OrderService;
 import cn.lili.modules.payment.entity.RefundLog;
 import cn.lili.modules.payment.kit.CashierSupport;
 import cn.lili.modules.payment.kit.Payment;
@@ -100,6 +101,11 @@ public class WechatPlugin implements Payment {
      */
     @Autowired
     private ConnectService connectService;
+    /**
+     * 联合登陆
+     */
+    @Autowired
+    private OrderService orderService;
 
 
     @Override
@@ -497,7 +503,7 @@ public class WechatPlugin implements Payment {
         try {
 
             Amount amount = new Amount().setRefund(CurrencyUtil.fen(refundLog.getTotalAmount()))
-                    .setTotal(CurrencyUtil.fen(refundLog.getPayPrice()));
+                    .setTotal(CurrencyUtil.fen(orderService.getPaymentTotal(refundLog.getOrderSn())));
 
             //退款参数准备
             RefundModel refundModel = new RefundModel()

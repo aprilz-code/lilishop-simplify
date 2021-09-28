@@ -1,7 +1,7 @@
 package cn.lili.modules.order.order.entity.dos;
 
-import cn.lili.mybatis.BaseEntity;
 import cn.lili.modules.order.order.entity.enums.ComplaintStatusEnum;
+import cn.lili.mybatis.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;

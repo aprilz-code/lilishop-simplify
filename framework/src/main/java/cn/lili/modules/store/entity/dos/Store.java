@@ -1,10 +1,10 @@
 package cn.lili.modules.store.entity.dos;
 
-import cn.lili.mybatis.BaseEntity;
 import cn.lili.common.utils.BeanUtil;
 import cn.lili.modules.member.entity.dos.Member;
 import cn.lili.modules.store.entity.dto.AdminStoreApplyDTO;
 import cn.lili.modules.store.entity.enums.StoreStatusEnum;
+import cn.lili.mybatis.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
@@ -96,6 +96,11 @@ public class Store extends BaseEntity {
 
     @ApiModelProperty(value = "腾讯云智服小程序唯一标识")
     private String yzfMpSign;
+
+
+    @ApiModelProperty(value = "udesk IM标识")
+    private String merchantEuid;
+
 
     public Store(Member member) {
         this.memberId = member.getId();

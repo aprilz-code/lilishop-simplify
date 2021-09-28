@@ -37,6 +37,8 @@ public enum ResultCode {
     LIMIT_ERROR(1003, "访问过于频繁，请稍后再试"),
     ILLEGAL_REQUEST_ERROR(1004, "非法请求，请重新刷新页面操作"),
     IMAGE_FILE_EXT_ERROR(1005, "不支持图片格式"),
+    PLATFORM_NOT_SUPPORTED_IM(1006, "平台未开启IM"),
+    STORE_NOT_SUPPORTED_IM(1007, "店铺未开启IM"),
     /**
      * 分类
      */
@@ -87,7 +89,7 @@ public enum ResultCode {
      */
     SPEC_SAVE_ERROR(13001, "规格修改失败"),
     SPEC_UPDATE_ERROR(13002, "规格修改失败"),
-    SPEC_DELETE_ERROR(13003, "此规格已绑定分类不允许删除"),
+    SPEC_DELETE_ERROR(13003, "分类已经绑定此规格，请先解除关联"),
 
     /**
      * 品牌
@@ -97,7 +99,7 @@ public enum ResultCode {
     BRAND_DISABLE_ERROR(14003, "品牌禁用失败"),
     BRAND_DELETE_ERROR(14004, "品牌删除失败"),
     BRAND_NAME_EXIST_ERROR(20002, "品牌名称重复！"),
-    BRAND_USE_DISABLE_ERROR(20003, "当前品牌下存在分类不可禁用"),
+    BRAND_USE_DISABLE_ERROR(20003, "分类已经绑定此品牌，请先解除关联"),
     BRAND_NOT_EXIST(20004, "品牌不存在"),
 
     /**
@@ -226,6 +228,7 @@ public enum ResultCode {
     WALLET_WITHDRAWAL_FROZEN_AMOUNT_INSUFFICIENT(34006, "冻结金额不足，无法处理提现申请请求！"),
     WALLET_ERROR_INSUFFICIENT(34003, "零钱提现失败！"),
     WALLET_REMARK_ERROR(34004, "请填写审核备注！"),
+    WALLET_EXIT_ERROR(34000, "钱包已存在，无法重复创建"),
     WALLET_APPLY_ERROR(34005, "提现申请异常！"),
 
     /**
@@ -333,7 +336,8 @@ public enum ResultCode {
      * 其他促销
      */
     MEMBER_SIGN_REPEAT(47001, "请勿重复签到"),
-    POINT_GOODS_ACTIVE_STOCK_ERROR(47002, "最低金额不能高于商品金额"),
+    POINT_GOODS_ACTIVE_STOCK_ERROR(47002, "活动库存数量不能高于商品库存"),
+    POINT_GOODS_ACTIVE_STOCK_INSUFFICIENT(47003, "积分商品库存不足"),
 
     /**
      * 砍价活动

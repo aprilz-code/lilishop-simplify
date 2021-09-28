@@ -1,9 +1,9 @@
 package cn.lili.modules.order.order.entity.vo;
 
-import cn.lili.mybatis.BaseEntity;
 import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.modules.order.order.entity.enums.OrderTypeEnum;
 import cn.lili.modules.order.order.entity.enums.PayStatusEnum;
+import cn.lili.mybatis.BaseEntity;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;

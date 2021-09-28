@@ -4,7 +4,6 @@ import cn.lili.modules.goods.entity.dos.Parameters;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
-import lombok.ToString;
 
 import java.io.Serializable;
 import java.util.List;

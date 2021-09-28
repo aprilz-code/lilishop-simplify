@@ -3,7 +3,6 @@ package cn.lili.modules.promotion.entity.vos;
 import cn.lili.modules.promotion.entity.dos.Pintuan;
 import cn.lili.modules.promotion.entity.dos.PromotionGoods;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import java.util.List;
 

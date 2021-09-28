@@ -2,6 +2,7 @@ package cn.lili.modules.distribution.mapper;
 
 import cn.lili.modules.distribution.entity.dos.DistributionSelectedGoods;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+
 /**
  * 选择分销商品数据处理层
  *

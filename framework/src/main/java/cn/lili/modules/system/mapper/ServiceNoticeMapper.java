@@ -1,7 +1,7 @@
 package cn.lili.modules.system.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import cn.lili.modules.system.entity.dos.ServiceNotice;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**
  * 服务订阅消息数据处理层

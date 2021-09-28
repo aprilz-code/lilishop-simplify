@@ -9,6 +9,7 @@ import cn.lili.modules.goods.mapper.CategoryParameterGroupMapper;
 import cn.lili.modules.goods.service.CategoryParameterGroupService;
 import cn.lili.modules.goods.service.ParametersService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -65,6 +66,11 @@ public class CategoryParameterGroupServiceImpl extends ServiceImpl<CategoryParam
         }
 
         return false;
+    }
+
+    @Override
+    public void deleteByCategoryId(String categoryId) {
+        this.baseMapper.delete(new LambdaUpdateWrapper<CategoryParameterGroup>().eq(CategoryParameterGroup::getCategoryId, categoryId));
     }
 
     /**

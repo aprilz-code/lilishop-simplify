@@ -1,7 +1,7 @@
 package cn.lili.modules.member.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import cn.lili.modules.member.entity.dos.MemberNoticeLog;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**
  * 会员消息数据处理层

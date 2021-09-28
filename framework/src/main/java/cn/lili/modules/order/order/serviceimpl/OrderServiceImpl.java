@@ -16,13 +16,13 @@ import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.goods.entity.dto.GoodsCompleteMessage;
-import cn.lili.modules.goods.service.GoodsSkuService;
 import cn.lili.modules.member.entity.dto.MemberAddressDTO;
 import cn.lili.modules.order.cart.entity.dto.TradeDTO;
 import cn.lili.modules.order.order.aop.OrderLogPoint;
 import cn.lili.modules.order.order.entity.dos.Order;
 import cn.lili.modules.order.order.entity.dos.OrderItem;
 import cn.lili.modules.order.order.entity.dos.Receipt;
+import cn.lili.modules.order.order.entity.dos.Trade;
 import cn.lili.modules.order.order.entity.dto.OrderBatchDeliverDTO;
 import cn.lili.modules.order.order.entity.dto.OrderExportDTO;
 import cn.lili.modules.order.order.entity.dto.OrderMessage;
@@ -33,10 +33,7 @@ import cn.lili.modules.order.order.entity.vo.OrderSimpleVO;
 import cn.lili.modules.order.order.entity.vo.OrderVO;
 import cn.lili.modules.order.order.mapper.OrderItemMapper;
 import cn.lili.modules.order.order.mapper.OrderMapper;
-import cn.lili.modules.order.order.service.OrderItemService;
-import cn.lili.modules.order.order.service.OrderService;
-import cn.lili.modules.order.order.service.ReceiptService;
-import cn.lili.modules.order.order.service.StoreFlowService;
+import cn.lili.modules.order.order.service.*;
 import cn.lili.modules.order.trade.entity.dos.OrderLog;
 import cn.lili.modules.order.trade.service.OrderLogService;
 import cn.lili.modules.payment.kit.enums.PaymentMethodEnum;
@@ -53,12 +50,12 @@ import cn.lili.mybatis.util.PageUtil;
 import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
 import cn.lili.rocketmq.tags.GoodsTagsEnum;
 import cn.lili.rocketmq.tags.MqOrderTagsEnum;
-import cn.lili.consumer.trigger.enums.DelayTypeEnums;
-import cn.lili.consumer.trigger.interfaces.TimeTrigger;
-import cn.lili.consumer.trigger.message.PintuanOrderMessage;
-import cn.lili.consumer.trigger.model.TimeExecuteConstant;
-import cn.lili.consumer.trigger.model.TimeTriggerMsg;
-import cn.lili.consumer.trigger.util.DelayQueueTools;
+import cn.lili.trigger.enums.DelayTypeEnums;
+import cn.lili.trigger.interfaces.TimeTrigger;
+import cn.lili.trigger.message.PintuanOrderMessage;
+import cn.lili.trigger.model.TimeExecuteConstant;
+import cn.lili.trigger.model.TimeTriggerMsg;
+import cn.lili.trigger.util.DelayQueueTools;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -144,11 +141,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
      */
     @Autowired
     private PintuanService pintuanService;
-    /**
-     * 规格商品
-     */
+
     @Autowired
-    private GoodsSkuService goodsSkuService;
+    private TradeService tradeService;
 
     @Override
     public void intoDB(TradeDTO tradeDTO) {
@@ -590,6 +585,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         for (OrderBatchDeliverDTO orderBatchDeliverDTO : orderBatchDeliverDTOList) {
             this.delivery(orderBatchDeliverDTO.getOrderSn(), orderBatchDeliverDTO.getLogisticsNo(), orderBatchDeliverDTO.getLogisticsId());
         }
+    }
+
+
+    @Override
+    public Double getPaymentTotal(String orderSn) {
+        Order order = this.getBySn(orderSn);
+        Trade trade = tradeService.getBySn(order.getTradeSn());
+        if (trade.getPayStatus().equals(PayStatusEnum.PAID.name())) {
+            return trade.getFlowPrice();
+        }
+        return order.getFlowPrice();
     }
 
     /**
