@@ -1,4 +1,4 @@
-/.idea/
+#/.idea/
 target
 *.iml
 *.class
@@ -9,9 +9,7 @@ target
 .settings/
 .factorypath
 
-log/
 *.factorypath
-*.log
 lili-shop/src/main/java/cn/lili/generator/CodeGenerator.java
 lili-logs
 
@@ -19,7 +17,6 @@ lili-logs
 ### STS ###
 .apt_generated
 .classpath
-.factorypath
 .project
 .settings
 .springBeans
@@ -28,7 +25,6 @@ lili-logs
 ### IntelliJ IDEA ###
 .idea
 *.iws
-*.iml
 *.ipr
 
 ### NetBeans ###
