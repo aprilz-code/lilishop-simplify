@@ -1,7 +1,7 @@
 package cn.lili.modules.order.order.service;
 
-import cn.lili.modules.order.cart.entity.dto.TradeDTO;
 import cn.lili.modules.order.order.entity.dos.Trade;
+import cn.lili.modules.order.cart.entity.dto.TradeDTO;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**

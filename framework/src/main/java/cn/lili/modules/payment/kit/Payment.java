@@ -131,7 +131,6 @@ public interface Payment {
     default String callbackUrl(String api, PaymentMethodEnum paymentMethodEnum) {
         return api + "/buyer/cashier/callback/" + paymentMethodEnum.name();
     }
-
     /**
      * 支付异步通知地址
      *

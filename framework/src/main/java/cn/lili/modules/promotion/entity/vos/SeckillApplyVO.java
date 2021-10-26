@@ -2,6 +2,7 @@ package cn.lili.modules.promotion.entity.vos;
 
 import cn.lili.modules.promotion.entity.dos.SeckillApply;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 秒杀活动申请视图对象

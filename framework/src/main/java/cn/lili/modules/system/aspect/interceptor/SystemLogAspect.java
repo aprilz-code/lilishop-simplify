@@ -1,15 +1,15 @@
 package cn.lili.modules.system.aspect.interceptor;
 
+import cn.lili.modules.system.aspect.annotation.SystemLogPoint;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.utils.IpHelper;
-import cn.lili.common.utils.IpUtils;
 import cn.lili.common.utils.SpelUtil;
 import cn.lili.common.utils.ThreadPoolUtil;
 import cn.lili.modules.permission.entity.vo.SystemLogVO;
+import cn.lili.common.utils.IpUtils;
 import cn.lili.modules.permission.service.SystemLogService;
-import cn.lili.modules.system.aspect.annotation.SystemLogPoint;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;

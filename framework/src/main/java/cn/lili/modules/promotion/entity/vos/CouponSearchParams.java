@@ -36,12 +36,12 @@ public class CouponSearchParams implements Serializable {
     /**
      * POINT("打折"), PRICE("减免现金");
      *
-     * @see CouponTypeEnum
+     * @see cn.lili.modules.promotion.entity.enums.CouponTypeEnum
      */
     @ApiModelProperty(value = "活动类型")
     private String couponType;
     /**
-     * @see CouponScopeTypeEnum
+     * @see cn.lili.modules.promotion.entity.enums.CouponScopeTypeEnum
      */
     @ApiModelProperty(value = "关联范围类型")
     private String scopeType;
@@ -54,7 +54,7 @@ public class CouponSearchParams implements Serializable {
     @ApiModelProperty(value = "已被领取的数量,可以为范围，如10_1000")
     private String receivedNum;
     /**
-     * @see CouponGetEnum
+     * @see cn.lili.modules.promotion.entity.enums.CouponGetEnum
      */
     @ApiModelProperty(value = "优惠券类型，分为免费领取和活动赠送")
     private String getType;

@@ -219,7 +219,7 @@ public class PintuanServiceImpl extends ServiceImpl<PintuanMapper, Pintuan> impl
     public boolean modifyPintuan(PintuanVO pintuan) {
         PintuanVO pintuanVO = this.checkExist(pintuan.getId());
         if (!pintuan.getPromotionStatus().equals(PromotionStatusEnum.NEW.name())) {
-            throw new ServiceException(ResultCode.PINTUAN_EDIT_ERROR);
+            throw new ServiceException(ResultCode.PINTUAN_EDIT_ERROR_ITS_OPEN);
         }
         //检查促销时间
         PromotionTools.checkPromotionTime(pintuan.getStartTime().getTime(), pintuan.getEndTime().getTime());

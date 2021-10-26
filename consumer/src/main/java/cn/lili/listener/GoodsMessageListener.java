@@ -1,8 +1,11 @@
 package cn.lili.listener;
 
+import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.ArrayUtil;
+import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.event.GoodsCommentCompleteEvent;
 import cn.lili.modules.distribution.entity.dos.DistributionGoods;
 import cn.lili.modules.distribution.entity.dos.DistributionSelectedGoods;
@@ -26,9 +29,11 @@ import cn.lili.modules.member.service.FootprintService;
 import cn.lili.modules.member.service.GoodsCollectionService;
 import cn.lili.modules.search.entity.dos.EsGoodsIndex;
 import cn.lili.modules.search.service.EsGoodsIndexService;
+import cn.lili.modules.search.utils.EsIndexUtil;
 import cn.lili.modules.store.entity.dos.StoreGoodsLabel;
 import cn.lili.modules.store.service.StoreGoodsLabelService;
 import cn.lili.modules.store.service.StoreService;
+import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
 import cn.lili.rocketmq.tags.GoodsTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -36,12 +41,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
+import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 商品消息
@@ -115,6 +122,17 @@ public class GoodsMessageListener implements RocketMQListener<MessageExt> {
     @Autowired
     private StoreGoodsLabelService storeGoodsLabelService;
 
+    /**
+     * rocketMq
+     */
+    @Autowired
+    private RocketMQTemplate rocketMQTemplate;
+    /**
+     * rocketMq配置
+     */
+    @Autowired
+    private RocketmqCustomProperties rocketmqCustomProperties;
+
     @Override
     public void onMessage(MessageExt messageExt) {
 
@@ -137,12 +155,21 @@ public class GoodsMessageListener implements RocketMQListener<MessageExt> {
             case UPDATE_GOODS_INDEX:
                 try {
                     String goodsIdsJsonStr = new String(messageExt.getBody());
-                    List<Goods> goodsList = new ArrayList<>();
-                    for (String goodsId : JSONUtil.toList(goodsIdsJsonStr, String.class)) {
-                        Goods goods = goodsService.getById(goodsId);
-                        goodsList.add(goods);
-                    }
+                    List<Goods> goodsList = goodsService.list(new LambdaQueryWrapper<Goods>().in(Goods::getId, JSONUtil.toList(goodsIdsJsonStr, String.class)));
                     this.updateGoodsIndex(goodsList);
+                } catch (Exception e) {
+                    log.error("更新商品索引事件执行异常，商品信息 {}", new String(messageExt.getBody()));
+                }
+                break;
+            case UPDATE_GOODS_INDEX_FIELD:
+                try {
+                    String updateIndexFieldsJsonStr = new String(messageExt.getBody());
+                    JSONObject updateIndexFields = JSONUtil.parseObj(updateIndexFieldsJsonStr);
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> queryFields = updateIndexFields.get("queryFields", Map.class);
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> updateFields = updateIndexFields.get("updateFields", Map.class);
+                    goodsIndexService.updateIndex(queryFields, updateFields);
                 } catch (Exception e) {
                     log.error("更新商品索引事件执行异常，商品信息 {}", new String(messageExt.getBody()));
                 }
@@ -385,6 +412,13 @@ public class GoodsMessageListener implements RocketMQListener<MessageExt> {
                 int buyCount = goodsSku.getBuyCount() + goodsCompleteMessage.getBuyNum();
                 goodsSku.setBuyCount(buyCount);
                 goodsSkuService.update(goodsSku);
+
+                //修改规格索引,发送mq消息
+                Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(
+                        MapUtil.builder().put("id", goodsCompleteMessage.getSkuId()).build(),
+                        MapUtil.builder().put("buyCount", buyCount).build());
+                String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD.name();
+                rocketMQTemplate.asyncSend(destination, JSONUtil.toJsonStr(updateIndexFieldsMap), RocketmqSendCallbackBuilder.commonCallback());
                 goodsIndexService.updateIndex(goodsCompleteMessage.getSkuId(), new EsGoodsIndex().setBuyCount(buyCount));
             } else {
                 log.error("商品SkuId为[" + goodsCompleteMessage.getGoodsId() + "的商品不存在，更新商品失败！");

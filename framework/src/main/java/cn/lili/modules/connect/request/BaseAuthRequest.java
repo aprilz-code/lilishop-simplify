@@ -1,7 +1,6 @@
 package cn.lili.modules.connect.request;
 
 import cn.lili.cache.Cache;
-import cn.lili.common.utils.HttpUtils;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.utils.UrlBuilder;
 import cn.lili.modules.connect.config.AuthConfig;
@@ -13,6 +12,7 @@ import cn.lili.modules.connect.entity.dto.ConnectAuthUser;
 import cn.lili.modules.connect.entity.enums.AuthResponseStatus;
 import cn.lili.modules.connect.exception.AuthException;
 import cn.lili.modules.connect.util.AuthChecker;
+import cn.lili.common.utils.HttpUtils;
 import cn.lili.modules.connect.util.UuidUtils;
 import com.xkcoding.http.util.UrlUtil;
 import lombok.extern.slf4j.Slf4j;

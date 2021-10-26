@@ -1,12 +1,12 @@
 package cn.lili.modules.payment.kit;
 
 import cn.hutool.json.JSONUtil;
-import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.SpringContextUtil;
 import cn.lili.common.vo.ResultMessage;
+import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.modules.member.service.MemberWalletService;
 import cn.lili.modules.payment.kit.dto.PayParam;
 import cn.lili.modules.payment.kit.enums.PaymentClientEnum;

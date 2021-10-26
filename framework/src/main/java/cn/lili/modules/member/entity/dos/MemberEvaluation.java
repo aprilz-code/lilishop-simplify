@@ -1,11 +1,11 @@
 package cn.lili.modules.member.entity.dos;
 
+import cn.lili.mybatis.BaseEntity;
 import cn.lili.common.enums.SwitchEnum;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.modules.goods.entity.dos.GoodsSku;
 import cn.lili.modules.member.entity.dto.MemberEvaluationDTO;
 import cn.lili.modules.order.order.entity.dos.Order;
-import cn.lili.mybatis.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;

@@ -1,12 +1,17 @@
-package cn.lili.controller.buyer.purchase;
+package cn.lili.controller.buyer.other.purchase;
 
+import cn.lili.common.enums.ResultCode;
 import cn.lili.common.enums.ResultUtil;
 import cn.lili.common.security.context.UserContext;
+import cn.lili.common.vo.PageVO;
 import cn.lili.common.vo.ResultMessage;
+import cn.lili.modules.goods.entity.dos.GoodsUnit;
+import cn.lili.modules.goods.service.GoodsUnitService;
 import cn.lili.modules.purchase.entity.dos.PurchaseOrder;
 import cn.lili.modules.purchase.entity.params.PurchaseOrderSearchParams;
 import cn.lili.modules.purchase.entity.vos.PurchaseOrderVO;
 import cn.lili.modules.purchase.service.PurchaseOrderService;
+import cn.lili.mybatis.util.PageUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -33,9 +38,19 @@ public class PurchaseBuyerController {
     @Autowired
     private PurchaseOrderService purchaseOrderService;
 
+    @Autowired
+    private GoodsUnitService goodsUnitService;
+
+
+    @ApiOperation(value = "分页获取商品计量单位")
+    @GetMapping("/goodsUnit")
+    public ResultMessage<IPage<GoodsUnit>> goodsUnitPage(PageVO pageVO) {
+        return ResultUtil.data(goodsUnitService.page(PageUtil.initPage(pageVO)));
+    }
+
     @ApiOperation(value = "添加采购单")
     @PostMapping
-    public ResultMessage<PurchaseOrderVO> addPurchaseOrderVO(PurchaseOrderVO purchaseOrderVO) {
+    public ResultMessage<PurchaseOrderVO> addPurchaseOrderVO(@RequestBody PurchaseOrderVO purchaseOrderVO) {
         return ResultUtil.data(purchaseOrderService.addPurchaseOrder(purchaseOrderVO));
     }
 
@@ -64,7 +79,7 @@ public class PurchaseBuyerController {
     @PutMapping("/{id}")
     public ResultMessage<Object> close(@NotNull @PathVariable String id) {
         purchaseOrderService.close(id);
-        return ResultUtil.success();
+        return ResultUtil.success(ResultCode.SUCCESS);
     }
 
 }

@@ -4,6 +4,7 @@ import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
+import cn.lili.mybatis.util.PageUtil;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.SearchVO;
 import cn.lili.modules.permission.entity.dos.Menu;
@@ -13,7 +14,6 @@ import cn.lili.modules.permission.entity.vo.MenuVO;
 import cn.lili.modules.permission.mapper.MenuMapper;
 import cn.lili.modules.permission.service.MenuService;
 import cn.lili.modules.permission.service.RoleMenuService;
-import cn.lili.mybatis.util.PageUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -48,8 +48,6 @@ public class MenuServiceImpl extends ServiceImpl<MenuMapper, Menu> implements Me
             throw new ServiceException(ResultCode.PERMISSION_MENU_ROLE_ERROR);
         }
         this.removeByIds(ids);
-        //删除关联关系
-        roleMenuService.deleteRoleMenu(ids);
     }
 
 

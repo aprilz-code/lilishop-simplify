@@ -4,6 +4,7 @@ import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.utils.CurrencyUtil;
+import cn.lili.mybatis.util.PageUtil;
 import cn.lili.modules.distribution.entity.dos.Distribution;
 import cn.lili.modules.distribution.entity.dos.DistributionOrder;
 import cn.lili.modules.distribution.entity.enums.DistributionOrderStatusEnum;
@@ -20,7 +21,6 @@ import cn.lili.modules.system.entity.dos.Setting;
 import cn.lili.modules.system.entity.dto.DistributionSetting;
 import cn.lili.modules.system.entity.enums.SettingEnum;
 import cn.lili.modules.system.service.SettingService;
-import cn.lili.mybatis.util.PageUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -79,7 +79,7 @@ public class DistributionOrderServiceImpl extends ServiceImpl<DistributionOrderM
      * @param orderSn 订单编号
      */
     @Override
-    public void payOrder(String orderSn) {
+    public void calculationDistribution(String orderSn) {
 
         //根据订单编号获取订单数据
         Order order = orderService.getBySn(orderSn);
@@ -160,6 +160,10 @@ public class DistributionOrderServiceImpl extends ServiceImpl<DistributionOrderM
             List<DistributionOrder> distributionOrderList = this.list(new LambdaQueryWrapper<DistributionOrder>()
                     .eq(DistributionOrder::getOrderSn, orderSn));
 
+            //如果没有分销定单，则直接返回
+            if (distributionOrderList.isEmpty()) {
+                return;
+            }
             //分销金额
             Double rebate = 0.0;
 

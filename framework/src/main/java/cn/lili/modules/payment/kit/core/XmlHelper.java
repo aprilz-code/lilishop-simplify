@@ -231,11 +231,11 @@ public class XmlHelper {
     }
 
     private static DocumentBuilderFactory getDocumentBuilderFactory() {
-        return XmlHelperHolder.documentBuilderFactory;
+        return XmlHelper.XmlHelperHolder.documentBuilderFactory;
     }
 
     private static XPathFactory getXpathFactory() {
-        return XmlHelperHolder.xPathFactory;
+        return XmlHelper.XmlHelperHolder.xPathFactory;
     }
 
     /**

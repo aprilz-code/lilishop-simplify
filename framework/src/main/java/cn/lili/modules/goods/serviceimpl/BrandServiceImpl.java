@@ -96,9 +96,7 @@ public class BrandServiceImpl extends ServiceImpl<BrandMapper, Brand> implements
 
     @Override
     public void deleteBrands(List<String> ids) {
-        ids.forEach(id -> {
-            checkoutCategory(id);
-        });
+        ids.forEach(this::checkoutCategory);
         this.removeByIds(ids);
     }
 
@@ -112,9 +110,7 @@ public class BrandServiceImpl extends ServiceImpl<BrandMapper, Brand> implements
         //分了绑定关系查询
         List<CategoryBrand> categoryBrands = categoryBrandService.getCategoryBrandListByBrandId(brandId);
         if (!categoryBrands.isEmpty()) {
-            List<String> brandIds = categoryBrands.stream().map(categoryBrand -> {
-                return categoryBrand.getCategoryId();
-            }).collect(Collectors.toList());
+            List<String> brandIds = categoryBrands.stream().map(CategoryBrand::getCategoryId).collect(Collectors.toList());
             throw new ServiceException(ResultCode.BRAND_USE_DISABLE_ERROR,
                     JSONUtil.toJsonStr(categoryService.getCategoryNameByIds(brandIds)));
         }

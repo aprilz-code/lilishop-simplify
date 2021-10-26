@@ -2,9 +2,9 @@ package cn.lili.modules.promotion.entity.dos;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.lili.common.enums.PromotionTypeEnum;
+import cn.lili.mybatis.BaseEntity;
 import cn.lili.modules.goods.entity.dos.GoodsSku;
 import cn.lili.modules.promotion.entity.enums.PromotionStatusEnum;
-import cn.lili.mybatis.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;

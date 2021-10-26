@@ -4,7 +4,10 @@ import cn.lili.modules.system.entity.dos.ServiceNotice;
 import cn.lili.modules.system.mapper.ServiceNoticeMapper;
 import cn.lili.modules.system.service.ServiceNoticeService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 服务订阅消息业务层实现

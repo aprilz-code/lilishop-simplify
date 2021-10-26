@@ -1,5 +1,6 @@
 package cn.lili.modules.promotion.serviceimpl;
 
+import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
@@ -37,6 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 优惠券活动业务层实现
@@ -66,7 +68,7 @@ public class CouponActivityServiceImpl extends ServiceImpl<CouponActivityMapper,
         //检测优惠券活动是否可以添加
         this.checkParam(couponActivityDTO);
         //如果有会员，则写入会员信息
-        if (couponActivityDTO.getMemberDTOS() != null && couponActivityDTO.getMemberDTOS().size() != 0) {
+        if (couponActivityDTO.getMemberDTOS() != null && !couponActivityDTO.getMemberDTOS().isEmpty()) {
             couponActivityDTO.setActivityScopeInfo(JSONUtil.toJsonStr(couponActivityDTO.getMemberDTOS()));
         }
         //添加优惠券活动
@@ -104,8 +106,7 @@ public class CouponActivityServiceImpl extends ServiceImpl<CouponActivityMapper,
     @Override
     public CouponActivityVO getCouponActivityVO(String couponActivityId) {
         CouponActivity couponActivity = this.getById(couponActivityId);
-        CouponActivityVO couponActivityVO = new CouponActivityVO(couponActivity, couponActivityItemService.getCouponActivityItemListVO(couponActivityId));
-        return couponActivityVO;
+        return new CouponActivityVO(couponActivity, couponActivityItemService.getCouponActivityItemListVO(couponActivityId));
     }
 
     @Override
@@ -215,13 +216,11 @@ public class CouponActivityServiceImpl extends ServiceImpl<CouponActivityMapper,
         //活动时间需超过当前时间
         PromotionTools.checkPromotionTime(couponActivity.getStartTime().getTime(), couponActivity.getEndTime().getTime());
         //指定会员判定
-        if (couponActivity.getActivityScope().equals(CouponActivitySendTypeEnum.DESIGNATED.name())) {
-            if (couponActivity.getMemberDTOS().size() == 0) {
-                throw new ServiceException(ResultCode.COUPON_ACTIVITY_MEMBER_ERROR);
-            }
+        if (couponActivity.getActivityScope().equals(CouponActivitySendTypeEnum.DESIGNATED.name()) && couponActivity.getMemberDTOS().isEmpty()) {
+            throw new ServiceException(ResultCode.COUPON_ACTIVITY_MEMBER_ERROR);
         }
         //优惠券数量判定
-        if (couponActivity.getCouponActivityItems().size() == 0) {
+        if (couponActivity.getCouponActivityItems().isEmpty()) {
             throw new ServiceException(ResultCode.COUPON_ACTIVITY_ITEM_ERROR);
         } else if (couponActivity.getCouponActivityItems().size() > 10) {
             throw new ServiceException(ResultCode.COUPON_ACTIVITY_ITEM_MUST_NUM_ERROR);
@@ -247,9 +246,14 @@ public class CouponActivityServiceImpl extends ServiceImpl<CouponActivityMapper,
             return memberService.listMaps(new QueryWrapper<Member>()
                     .select("id,nick_name"));
         } else {
+            List<Object> ids = new ArrayList<>();
+            if (JSONUtil.isJsonArray(couponActivity.getActivityScopeInfo())) {
+                JSONArray array = JSONUtil.parseArray(couponActivity.getActivityScopeInfo());
+                ids = array.toList(Map.class).stream().map(i -> i.get("id")).collect(Collectors.toList());
+            }
             return memberService.listMaps(new QueryWrapper<Member>()
                     .select("id,nick_name")
-                    .in("id", couponActivity.getActivityScopeInfo()));
+                    .in("id", ids));
         }
     }
 

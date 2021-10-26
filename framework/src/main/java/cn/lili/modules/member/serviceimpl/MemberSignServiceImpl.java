@@ -2,23 +2,24 @@ package cn.lili.modules.member.serviceimpl;
 
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
+import cn.lili.modules.member.entity.enums.PointTypeEnum;
+import cn.lili.modules.system.entity.dto.PointSettingItem;
+import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
+import cn.lili.rocketmq.tags.MemberTagsEnum;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.CurrencyUtil;
 import cn.lili.common.utils.DateUtil;
+import cn.lili.common.utils.StringUtils;
+import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.modules.member.entity.dos.MemberSign;
-import cn.lili.modules.member.entity.enums.PointTypeEnum;
 import cn.lili.modules.member.mapper.MemberSignMapper;
 import cn.lili.modules.member.service.MemberService;
 import cn.lili.modules.member.service.MemberSignService;
 import cn.lili.modules.system.entity.dos.Setting;
 import cn.lili.modules.system.entity.dto.PointSetting;
-import cn.lili.modules.system.entity.dto.PointSettingItem;
 import cn.lili.modules.system.entity.enums.SettingEnum;
 import cn.lili.modules.system.service.SettingService;
-import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
-import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 会员签到业务层实现

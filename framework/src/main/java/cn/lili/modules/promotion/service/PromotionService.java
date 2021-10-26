@@ -1,7 +1,7 @@
 package cn.lili.modules.promotion.service;
 
-import cn.lili.modules.search.entity.dos.EsGoodsIndex;
 import cn.lili.trigger.message.PromotionMessage;
+import cn.lili.modules.search.entity.dos.EsGoodsIndex;
 
 import java.util.Map;
 

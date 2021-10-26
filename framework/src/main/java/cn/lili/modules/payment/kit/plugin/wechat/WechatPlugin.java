@@ -7,16 +7,16 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
-import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.enums.ResultUtil;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.ApiProperties;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.CurrencyUtil;
 import cn.lili.common.utils.SnowFlake;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.ResultMessage;
+import cn.lili.common.properties.ApiProperties;
+import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.modules.connect.entity.Connect;
 import cn.lili.modules.connect.entity.enums.ConnectEnum;
 import cn.lili.modules.connect.service.ConnectService;
@@ -33,6 +33,7 @@ import cn.lili.modules.payment.kit.dto.PayParam;
 import cn.lili.modules.payment.kit.dto.PaymentSuccessParams;
 import cn.lili.modules.payment.kit.enums.PaymentMethodEnum;
 import cn.lili.modules.payment.kit.params.dto.CashierParam;
+import cn.lili.modules.payment.kit.plugin.wechat.enums.WechatApiEnum;
 import cn.lili.modules.payment.kit.plugin.wechat.enums.WechatDomain;
 import cn.lili.modules.payment.kit.plugin.wechat.model.*;
 import cn.lili.modules.payment.service.PaymentService;
@@ -146,7 +147,7 @@ public class WechatPlugin implements Payment {
             PaymentHttpResponse response = WechatApi.v3(
                     RequestMethodEnums.POST,
                     WechatDomain.CHINA.toString(),
-                    cn.lili.modules.payment.kit.plugin.wechat.enums.WechatApi.H5_PAY.toString(),
+                    WechatApiEnum.H5_PAY.toString(),
                     setting.getMchId(),
                     setting.getSerialNumber(),
                     null,
@@ -203,7 +204,7 @@ public class WechatPlugin implements Payment {
             PaymentHttpResponse response = WechatApi.v3(
                     RequestMethodEnums.POST,
                     WechatDomain.CHINA.toString(),
-                    cn.lili.modules.payment.kit.plugin.wechat.enums.WechatApi.JS_API_PAY.toString(),
+                    WechatApiEnum.JS_API_PAY.toString(),
                     setting.getMchId(),
                     setting.getSerialNumber(),
                     null,
@@ -264,7 +265,7 @@ public class WechatPlugin implements Payment {
             PaymentHttpResponse response = WechatApi.v3(
                     RequestMethodEnums.POST,
                     WechatDomain.CHINA.toString(),
-                    cn.lili.modules.payment.kit.plugin.wechat.enums.WechatApi.APP_PAY.toString(),
+                    WechatApiEnum.APP_PAY.toString(),
                     setting.getMchId(),
                     setting.getSerialNumber(),
                     null,
@@ -327,7 +328,7 @@ public class WechatPlugin implements Payment {
             PaymentHttpResponse response = WechatApi.v3(
                     RequestMethodEnums.POST,
                     WechatDomain.CHINA.toString(),
-                    cn.lili.modules.payment.kit.plugin.wechat.enums.WechatApi.NATIVE_PAY.toString(),
+                    WechatApiEnum.NATIVE_PAY.toString(),
                     setting.getMchId(),
                     setting.getSerialNumber(),
                     null,
@@ -404,7 +405,7 @@ public class WechatPlugin implements Payment {
             PaymentHttpResponse response = WechatApi.v3(
                     RequestMethodEnums.POST,
                     WechatDomain.CHINA.toString(),
-                    cn.lili.modules.payment.kit.plugin.wechat.enums.WechatApi.JS_API_PAY.toString(),
+                    WechatApiEnum.JS_API_PAY.toString(),
                     setting.getMchId(),
                     setting.getSerialNumber(),
                     null,
@@ -519,7 +520,7 @@ public class WechatPlugin implements Payment {
             PaymentHttpResponse response = WechatApi.v3(
                     RequestMethodEnums.POST,
                     WechatDomain.CHINA.toString(),
-                    cn.lili.modules.payment.kit.plugin.wechat.enums.WechatApi.DOMESTIC_REFUNDS.toString(),
+                    WechatApiEnum.DOMESTIC_REFUNDS.toString(),
                     setting.getMchId(),
                     setting.getSerialNumber(),
                     null,
@@ -631,7 +632,7 @@ public class WechatPlugin implements Payment {
             PaymentHttpResponse response = WechatApi.v3(
                     RequestMethodEnums.GET,
                     WechatDomain.CHINA.toString(),
-                    cn.lili.modules.payment.kit.plugin.wechat.enums.WechatApi.GET_CERTIFICATES.toString(),
+                    WechatApiEnum.GET_CERTIFICATES.toString(),
                     setting.getMchId(),
                     setting.getSerialNumber(),
                     null,

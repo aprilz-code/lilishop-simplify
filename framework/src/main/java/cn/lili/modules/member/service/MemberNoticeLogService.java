@@ -1,7 +1,7 @@
 package cn.lili.modules.member.service;
 
-import cn.lili.modules.member.entity.dos.MemberNoticeLog;
 import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.member.entity.dos.MemberNoticeLog;
 
 /**
  * 会员消息业务层

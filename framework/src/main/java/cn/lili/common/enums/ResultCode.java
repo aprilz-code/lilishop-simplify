@@ -65,7 +65,7 @@ public enum ResultCode {
     GOODS_UPPER_ERROR(11004, "商品上架失败"),
     GOODS_AUTH_ERROR(11005, "商品审核失败"),
     POINT_GOODS_ERROR(11006, "积分商品业务异常，请稍后重试"),
-    GOODS_SKU_SN_ERROR(11007, "商品SKU编号不能为空"),
+    GOODS_SKU_SN_ERROR(11007, "商品SKU货号不能为空"),
     GOODS_SKU_PRICE_ERROR(11008, "商品SKU价格不能小于等于0"),
     GOODS_SKU_COST_ERROR(11009, "商品SKU成本价不能小于等于0"),
     GOODS_SKU_WEIGHT_ERROR(11010, "商品重量不能为负数"),
@@ -286,6 +286,7 @@ public enum ResultCode {
     PINTUAN_MANUAL_CLOSE_ERROR(42007, "手动关闭拼团活动失败"),
     PINTUAN_ADD_ERROR(42008, "添加拼团活动失败"),
     PINTUAN_EDIT_ERROR(42009, "修改拼团活动失败"),
+    PINTUAN_EDIT_ERROR_ITS_OPEN(42019, "拼团活动已开启，无法修改拼团活动！"),
     PINTUAN_DELETE_ERROR(42010, "删除拼团活动失败"),
     PINTUAN_JOIN_ERROR(42011, "不能参与自己发起的拼团活动！"),
     PINTUAN_LIMIT_NUM_ERROR(42012, "购买数量超过拼团活动限制数量！"),
@@ -448,6 +449,8 @@ public enum ResultCode {
     CUSTOM_WORDS_SECRET_KEY_ERROR(90002, "秘钥验证失败！"),
     CONNECT_NOT_EXIST(90000, "登录方式不存在！"),
     ELASTICSEARCH_INDEX_INIT_ERROR(90003, "索引初始化失败！"),
+    PURCHASE_ORDER_DEADLINE_ERROR(90004,"供求单，已超过报名截止时间")
+
     ;
 
     private final Integer code;

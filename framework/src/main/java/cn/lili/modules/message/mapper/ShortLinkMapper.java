@@ -1,7 +1,7 @@
 package cn.lili.modules.message.mapper;
 
-import cn.lili.modules.message.entity.dos.ShortLink;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import cn.lili.modules.message.entity.dos.ShortLink;
 
 /**
  * 短链接 Dao层

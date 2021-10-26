@@ -3,14 +3,16 @@ package cn.lili.modules.payment.kit.plugin.alipay;
 import cn.hutool.core.net.URLDecoder;
 import cn.hutool.core.net.URLEncoder;
 import cn.hutool.json.JSONUtil;
+import cn.lili.common.context.ThreadContextHolder;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.enums.ResultUtil;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.ApiProperties;
+import cn.lili.common.properties.DomainProperties;
 import cn.lili.common.utils.BeanUtil;
 import cn.lili.common.utils.SnowFlake;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.ResultMessage;
+import cn.lili.common.properties.ApiProperties;
 import cn.lili.modules.payment.entity.RefundLog;
 import cn.lili.modules.payment.kit.CashierSupport;
 import cn.lili.modules.payment.kit.Payment;
@@ -73,6 +75,11 @@ public class AliPayPlugin implements Payment {
      */
     @Autowired
     private ApiProperties apiProperties;
+    /**
+     * 域名配置
+     */
+    @Autowired
+    private DomainProperties domainProperties;
 
     @Override
     public ResultMessage<Object> h5pay(HttpServletRequest request, HttpServletResponse response, PayParam payParam) {
@@ -236,14 +243,41 @@ public class AliPayPlugin implements Payment {
 
     @Override
     public void callBack(HttpServletRequest request) {
-        verifyNotify(request);
         log.info("支付同步回调：");
+        callback(request);
+
     }
 
     @Override
     public void notify(HttpServletRequest request) {
         verifyNotify(request);
         log.info("支付异步通知：");
+    }
+
+    /**
+     * 验证支付结果
+     *
+     * @param request
+     */
+    private void callback(HttpServletRequest request) {
+        try {
+            AlipayPaymentSetting alipayPaymentSetting = alipayPaymentSetting();
+            //获取支付宝反馈信息
+            Map<String, String> map = AliPayApi.toMap(request);
+            log.info("同步回调：{}", JSONUtil.toJsonStr(map));
+            boolean verifyResult = AlipaySignature.rsaCertCheckV1(map, alipayPaymentSetting.getAlipayPublicCertPath(), "UTF-8",
+                    "RSA2");
+            if (verifyResult) {
+                log.info("支付回调通知：支付成功-参数：{}", map);
+            } else {
+                log.info("支付回调通知：支付失败-参数：{}", map);
+            }
+
+            ThreadContextHolder.getHttpResponse().sendRedirect(domainProperties.getWap()+"/pages/order/myOrder?status=0");
+        } catch (Exception e) {
+            log.error("支付回调同步通知异常", e);
+        }
+
     }
 
     /**
