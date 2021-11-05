@@ -3,7 +3,7 @@ package cn.lili.modules.goods.service;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.goods.entity.dos.Studio;
 import cn.lili.modules.goods.entity.vos.StudioVO;
-import cn.lili.trigger.message.BroadcastMessage;
+import cn.lili.consumer.trigger.message.BroadcastMessage;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
