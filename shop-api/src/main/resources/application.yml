@@ -197,8 +197,7 @@ logging:
   # 输出级别
   level:
     cn.lili: debug
-    org.hibernate: debug
-#    org.springframework: debug
+    org.springframework: info
   #    org.springframework.data.mongodb.core: debug
   file:
     # 指定路径
@@ -225,7 +224,7 @@ lili:
     faultTolerant: 3
   #短信模版配置
   system:
-    isDemoSite: true
+    isDemoSite: false
   statistics:
     # 在线人数统计 X 小时。这里设置48，即统计过去48小时每小时在线人数
     onlineMember: 48
