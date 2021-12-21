@@ -4,8 +4,6 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.common.enums.PromotionTypeEnum;
-import cn.lili.common.security.sensitive.Sensitive;
-import cn.lili.common.security.sensitive.enums.SensitiveStrategy;
 import cn.lili.common.utils.BeanUtil;
 import cn.lili.modules.goods.entity.enums.GoodsTypeEnum;
 import cn.lili.modules.order.cart.entity.dto.TradeDTO;
@@ -14,13 +12,13 @@ import cn.lili.modules.order.cart.entity.enums.DeliveryMethodEnum;
 import cn.lili.modules.order.cart.entity.vo.CartVO;
 import cn.lili.modules.order.order.entity.dto.PriceDetailDTO;
 import cn.lili.modules.order.order.entity.enums.*;
-import cn.lili.modules.promotion.entity.dos.PromotionGoods;
 import cn.lili.mybatis.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -33,6 +31,7 @@ import java.util.Optional;
  * @author Chopper
  * @since 2020/11/17 7:30 下午
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @TableName("li_order")
 @ApiModel(value = "订单")
@@ -91,7 +90,6 @@ public class Order extends BaseEntity {
     private String consigneeName;
 
     @ApiModelProperty(value = "收件人手机")
-    @Sensitive(strategy = SensitiveStrategy.PHONE)
     private String consigneeMobile;
 
     /**
@@ -264,7 +262,7 @@ public class Order extends BaseEntity {
             this.setOrderType(OrderTypeEnum.VIRTUAL.name());
         } else {
             //促销订单（拼团、积分）-判断购买的是虚拟商品还是实物商品
-            String goodsType = cartVO.getSkuList().get(0).getGoodsSku().getGoodsType();
+            String goodsType = cartVO.getCheckedSkuList().get(0).getGoodsSku().getGoodsType();
             if (StrUtil.isEmpty(goodsType) || goodsType.equals(GoodsTypeEnum.PHYSICAL_GOODS.name())) {
                 this.setOrderType(OrderTypeEnum.NORMAL.name());
             } else {
@@ -275,9 +273,8 @@ public class Order extends BaseEntity {
 
             //判断是否为拼团订单，如果为拼团订单获取拼团ID，判断是否为主订单
             if (tradeDTO.getCartTypeEnum().name().equals(PromotionTypeEnum.PINTUAN.name())) {
-                Optional<String> pintuanId = cartVO.getSkuList().get(0).getPromotions().stream()
-                        .filter(i -> i.getPromotionType().equals(PromotionTypeEnum.PINTUAN.name())).map(PromotionGoods::getPromotionId).findFirst();
-                promotionId = pintuanId.get();
+                Optional<String> pintuanPromotions = cartVO.getCheckedSkuList().get(0).getPromotionMap().keySet().stream().filter(i -> i.contains(PromotionTypeEnum.PINTUAN.name())).findFirst();
+                pintuanPromotions.ifPresent(s -> promotionId = s.split("-")[1]);
             }
         }
     }

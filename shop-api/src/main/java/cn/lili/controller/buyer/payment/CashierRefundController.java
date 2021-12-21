@@ -1,7 +1,7 @@
 package cn.lili.controller.buyer.payment;
 
+import cn.lili.modules.payment.entity.enums.PaymentMethodEnum;
 import cn.lili.modules.payment.kit.RefundSupport;
-import cn.lili.modules.payment.kit.enums.PaymentMethodEnum;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -5,7 +5,6 @@ import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Size;
 
 /**
  * 店铺-银行信息

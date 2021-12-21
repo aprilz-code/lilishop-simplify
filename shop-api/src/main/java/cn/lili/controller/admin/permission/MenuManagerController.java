@@ -1,12 +1,12 @@
 package cn.lili.controller.admin.permission;
 
+import cn.lili.common.aop.annotation.DemoSite;
 import cn.lili.common.enums.ResultUtil;
 import cn.lili.common.vo.ResultMessage;
 import cn.lili.modules.permission.entity.dos.Menu;
 import cn.lili.modules.permission.entity.dto.MenuSearchParams;
 import cn.lili.modules.permission.entity.vo.MenuVO;
 import cn.lili.modules.permission.service.MenuService;
-import cn.lili.modules.system.aspect.annotation.DemoSite;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -28,6 +28,7 @@ import java.util.List;
 @Api(tags = "管理端,菜单管理接口")
 @RequestMapping("/manager/menu")
 public class MenuManagerController {
+
     @Autowired
     private MenuService menuService;
 
@@ -42,9 +43,9 @@ public class MenuManagerController {
     @DemoSite
     public ResultMessage<Menu> add(Menu menu) {
         try {
-            menuService.save(menu);
+            menuService.saveOrUpdateMenu(menu);
         } catch (Exception e) {
-            log.error("添加菜单错误",e);
+            log.error("添加菜单错误", e);
         }
         return ResultUtil.data(menu);
     }
@@ -56,7 +57,7 @@ public class MenuManagerController {
     @DemoSite
     public ResultMessage<Menu> edit(@PathVariable String id, Menu menu) {
         menu.setId(id);
-        menuService.updateById(menu);
+        menuService.saveOrUpdateMenu(menu);
         return ResultUtil.data(menu);
     }
 

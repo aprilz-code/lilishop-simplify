@@ -1,15 +1,15 @@
 package cn.lili.modules.order.order.entity.vo;
 
 
+import cn.lili.modules.order.cart.entity.enums.DeliveryMethodEnum;
 import cn.lili.modules.order.order.entity.dos.Order;
 import cn.lili.modules.order.order.entity.dos.OrderItem;
 import cn.lili.modules.order.order.entity.dos.Receipt;
 import cn.lili.modules.order.order.entity.enums.DeliverStatusEnum;
 import cn.lili.modules.order.order.entity.enums.OrderStatusEnum;
 import cn.lili.modules.order.order.entity.enums.PayStatusEnum;
-import cn.lili.modules.payment.kit.enums.PaymentMethodEnum;
-import cn.lili.modules.order.cart.entity.enums.DeliveryMethodEnum;
 import cn.lili.modules.order.trade.entity.dos.OrderLog;
+import cn.lili.modules.payment.entity.enums.PaymentMethodEnum;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;

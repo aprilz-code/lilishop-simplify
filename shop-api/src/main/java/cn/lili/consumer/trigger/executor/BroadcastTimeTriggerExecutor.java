@@ -1,10 +1,10 @@
 package cn.lili.consumer.trigger.executor;
 
 import cn.hutool.json.JSONUtil;
-import cn.lili.modules.goods.service.StudioService;
 import cn.lili.consumer.trigger.TimeTriggerExecutor;
-import cn.lili.consumer.trigger.message.BroadcastMessage;
-import cn.lili.consumer.trigger.model.TimeExecuteConstant;
+import cn.lili.modules.goods.service.StudioService;
+import cn.lili.trigger.message.BroadcastMessage;
+import cn.lili.trigger.model.TimeExecuteConstant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

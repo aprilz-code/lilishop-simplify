@@ -1,7 +1,7 @@
 package cn.lili.modules.message.entity.dos;
 
-import cn.lili.mybatis.BaseEntity;
 import cn.lili.modules.message.entity.enums.MessageStatusEnum;
+import cn.lili.mybatis.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;

@@ -225,7 +225,7 @@ public class EsGoodsIndex implements Serializable {
      */
     @Field(type = FieldType.Text)
     @ApiModelProperty("审核状态")
-    private String isAuth;
+    private String authFlag;
 
     /**
      * 卖点
@@ -260,6 +260,12 @@ public class EsGoodsIndex implements Serializable {
     private String goodsType;
 
     /**
+     * @see cn.lili.modules.goods.entity.enums.GoodsTypeEnum
+     */
+    @ApiModelProperty(value = "商品sku基础分数", required = true)
+    private Integer skuSource;
+
+    /**
      * 商品属性（参数和规格）
      */
     @Field(type = FieldType.Nested)
@@ -289,7 +295,7 @@ public class EsGoodsIndex implements Serializable {
             this.categoryPath = sku.getCategoryPath();
             this.goodsVideo = sku.getGoodsVideo();
             this.mobileIntro = sku.getMobileIntro();
-            this.buyCount = sku.getBuyCount();
+            this.buyCount = sku.getBuyCount() != null ? sku.getBuyCount() : 0;
             this.commentNum = sku.getCommentNum();
             this.small = sku.getSmall();
             this.brandId = sku.getBrandId();
@@ -299,9 +305,10 @@ public class EsGoodsIndex implements Serializable {
             this.selfOperated = sku.getSelfOperated();
             this.salesModel = sku.getSalesModel();
             this.marketEnable = sku.getMarketEnable();
-            this.isAuth = sku.getIsAuth();
+            this.authFlag = sku.getAuthFlag();
             this.intro = sku.getIntro();
             this.grade = sku.getGrade();
+            this.recommend = sku.getRecommend();
             this.releaseTime = new Date();
         }
     }
@@ -364,7 +371,7 @@ public class EsGoodsIndex implements Serializable {
             this.selfOperated = sku.getSelfOperated();
             this.salesModel = sku.getSalesModel();
             this.marketEnable = sku.getMarketEnable();
-            this.isAuth = sku.getIsAuth();
+            this.authFlag = sku.getAuthFlag();
             this.intro = sku.getIntro();
             this.grade = sku.getGrade();
             this.releaseTime = new Date();

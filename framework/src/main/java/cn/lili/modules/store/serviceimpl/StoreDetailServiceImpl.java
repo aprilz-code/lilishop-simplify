@@ -7,11 +7,8 @@ import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.BeanUtil;
 import cn.lili.modules.goods.entity.dos.Category;
-import cn.lili.modules.goods.entity.dos.Goods;
-import cn.lili.modules.goods.entity.dos.GoodsSku;
 import cn.lili.modules.goods.service.CategoryService;
 import cn.lili.modules.goods.service.GoodsService;
-import cn.lili.modules.goods.service.GoodsSkuService;
 import cn.lili.modules.search.utils.EsIndexUtil;
 import cn.lili.modules.store.entity.dos.Store;
 import cn.lili.modules.store.entity.dos.StoreDetail;
@@ -35,10 +32,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * 店铺详细业务层实现
@@ -63,9 +57,6 @@ public class StoreDetailServiceImpl extends ServiceImpl<StoreDetailMapper, Store
 
     @Autowired
     private GoodsService goodsService;
-
-    @Autowired
-    private GoodsSkuService goodsSkuService;
 
     @Autowired
     private RocketmqCustomProperties rocketmqCustomProperties;
@@ -103,23 +94,25 @@ public class StoreDetailServiceImpl extends ServiceImpl<StoreDetailMapper, Store
         return result;
     }
 
+    @Override
     public void updateStoreGoodsInfo(Store store) {
 
-        goodsService.update(new LambdaUpdateWrapper<Goods>()
-                .eq(Goods::getStoreId, store.getId())
-                .set(Goods::getStoreName, store.getStoreName())
-                .set(Goods::getSelfOperated, store.getSelfOperated()));
-        goodsSkuService.update(new LambdaUpdateWrapper<GoodsSku>()
-                .eq(GoodsSku::getStoreId, store.getId())
-                .set(GoodsSku::getStoreName, store.getStoreName())
-                .set(GoodsSku::getSelfOperated, store.getSelfOperated()));
+        goodsService.updateStoreDetail(store);
 
         Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(
-                MapUtil.builder().put("storeId", store.getId()).build(),
-                MapUtil.builder().put("storeName", store.getStoreName()).put("selfOperated", store.getSelfOperated()).build());
+                MapUtil.builder(new HashMap<String, Object>()).put("storeId", store.getId()).build(),
+                MapUtil.builder(new HashMap<String, Object>()).put("storeName", store.getStoreName()).put("selfOperated", store.getSelfOperated()).build());
         String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD.name();
         //发送mq消息
         rocketMQTemplate.asyncSend(destination, JSONUtil.toJsonStr(updateIndexFieldsMap), RocketmqSendCallbackBuilder.commonCallback());
+    }
+
+    @Override
+    public Boolean editMerchantEuid(String merchantEuid) {
+        AuthUser tokenUser = Objects.requireNonNull(UserContext.getCurrentUser());
+        Store store = storeService.getById(tokenUser.getStoreId());
+        store.setMerchantEuid(merchantEuid);
+        return storeService.updateById(store);
     }
 
     @Override

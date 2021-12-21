@@ -1,15 +1,15 @@
 package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
-import cn.lili.rocketmq.tags.MemberTagsEnum;
 import cn.lili.consumer.event.MemberPointChangeEvent;
 import cn.lili.consumer.event.MemberRegisterEvent;
 import cn.lili.consumer.event.MemberWithdrawalEvent;
 import cn.lili.modules.member.entity.dos.Member;
 import cn.lili.modules.member.entity.dos.MemberSign;
 import cn.lili.modules.member.entity.dto.MemberPointMessage;
-import cn.lili.modules.member.entity.dto.MemberWithdrawalMessage;
 import cn.lili.modules.member.service.MemberSignService;
+import cn.lili.modules.wallet.entity.dto.MemberWithdrawalMessage;
+import cn.lili.rocketmq.tags.MemberTagsEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;

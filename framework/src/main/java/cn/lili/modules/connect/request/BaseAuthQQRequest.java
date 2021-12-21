@@ -2,6 +2,7 @@ package cn.lili.modules.connect.request;
 
 import cn.hutool.core.convert.Convert;
 import cn.lili.cache.Cache;
+import cn.lili.common.utils.HttpUtils;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.utils.UrlBuilder;
 import cn.lili.modules.connect.config.AuthConfig;
@@ -14,7 +15,6 @@ import cn.lili.modules.connect.entity.enums.AuthResponseStatus;
 import cn.lili.modules.connect.entity.enums.AuthUserGender;
 import cn.lili.modules.connect.exception.AuthException;
 import cn.lili.modules.connect.util.GlobalAuthUtils;
-import cn.lili.common.utils.HttpUtils;
 import com.alibaba.fastjson.JSONObject;
 
 import java.util.Map;

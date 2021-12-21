@@ -3,10 +3,10 @@ package cn.lili.consumer.timetask.handler.impl.goods;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
+import cn.lili.consumer.timetask.handler.EveryDayExecute;
 import cn.lili.modules.goods.mapper.GoodsMapper;
 import cn.lili.modules.member.entity.dos.MemberEvaluation;
 import cn.lili.modules.member.mapper.MemberEvaluationMapper;
-import cn.lili.consumer.timetask.handler.EveryDayExecute;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.stereotype.Component;
 

@@ -1,6 +1,7 @@
 package cn.lili.modules.member.service;
 
 
+import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.security.token.Token;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.connect.entity.dto.ConnectAuthUser;
@@ -8,12 +9,13 @@ import cn.lili.modules.member.entity.dos.Member;
 import cn.lili.modules.member.entity.dto.ManagerMemberEditDTO;
 import cn.lili.modules.member.entity.dto.MemberAddDTO;
 import cn.lili.modules.member.entity.dto.MemberEditDTO;
-import cn.lili.modules.member.entity.vo.MemberDistributionVO;
 import cn.lili.modules.member.entity.vo.MemberSearchVO;
+import cn.lili.modules.member.entity.vo.MemberVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 会员业务层
@@ -141,7 +143,7 @@ public interface MemberService extends IService<Member> {
      * @param page           分页
      * @return 会员分页
      */
-    IPage<Member> getMemberPage(MemberSearchVO memberSearchVO, PageVO page);
+    IPage<MemberVO> getMemberPage(MemberSearchVO memberSearchVO, PageVO page);
 
     /**
      * 一键注册会员
@@ -196,17 +198,26 @@ public interface MemberService extends IService<Member> {
     Boolean updateMemberStatus(List<String> memberIds, Boolean status);
 
     /**
-     * 查看会员数据分布
-     *
-     * @return 会员数据分布
-     */
-    List<MemberDistributionVO> distribution();
-
-    /**
      * 根据条件查询会员总数
      *
      * @param memberSearchVO
      * @return 会员总数
      */
-    Integer getMemberNum(MemberSearchVO memberSearchVO);
+    long getMemberNum(MemberSearchVO memberSearchVO);
+
+    /**
+     * 获取指定会员数据
+     *
+     * @param columns 指定获取的列
+     * @param memberIds 会员ids
+     * @return 指定会员数据
+     */
+    List<Map<String, Object>> listFieldsByMemberIds(String columns, List<String> memberIds);
+
+    /**
+     * 登出
+     *
+     * @param userEnums token角色类型
+     */
+    void logout(UserEnums userEnums);
 }

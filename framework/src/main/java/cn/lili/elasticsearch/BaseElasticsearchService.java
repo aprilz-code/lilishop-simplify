@@ -197,6 +197,9 @@ public abstract class BaseElasticsearchService {
                         "      \"commentNum\": {\n" +
                         "        \"type\": \"long\"\n" +
                         "      },\n" +
+                        "      \"skuSource\": {\n" +
+                        "        \"type\": \"long\"\n" +
+                        "      },\n" +
                         "      \"goodsId\": {\n" +
                         "        \"type\": \"text\",\n" +
                         "        \"fields\": {\n" +
@@ -241,7 +244,7 @@ public abstract class BaseElasticsearchService {
                         "          }\n" +
                         "        }\n" +
                         "      },\n" +
-                        "      \"isAuth\": {\n" +
+                        "      \"authFlag\": {\n" +
                         "        \"type\": \"text\",\n" +
                         "        \"fields\": {\n" +
                         "          \"keyword\": {\n" +

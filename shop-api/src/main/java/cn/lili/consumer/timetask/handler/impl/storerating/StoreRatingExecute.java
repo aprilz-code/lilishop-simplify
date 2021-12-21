@@ -1,13 +1,13 @@
 package cn.lili.consumer.timetask.handler.impl.storerating;
 
 import cn.lili.common.enums.SwitchEnum;
+import cn.lili.consumer.timetask.handler.EveryDayExecute;
 import cn.lili.modules.member.entity.dos.MemberEvaluation;
 import cn.lili.modules.member.entity.vo.StoreRatingVO;
 import cn.lili.modules.member.mapper.MemberEvaluationMapper;
 import cn.lili.modules.store.entity.dos.Store;
 import cn.lili.modules.store.entity.enums.StoreStatusEnum;
 import cn.lili.modules.store.service.StoreService;
-import cn.lili.consumer.timetask.handler.EveryDayExecute;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;

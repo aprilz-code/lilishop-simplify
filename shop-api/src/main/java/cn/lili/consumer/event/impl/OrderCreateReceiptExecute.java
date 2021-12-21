@@ -8,6 +8,7 @@ import cn.lili.modules.order.order.entity.dos.Receipt;
 import cn.lili.modules.order.order.entity.vo.OrderVO;
 import cn.lili.modules.order.order.entity.vo.ReceiptVO;
 import cn.lili.modules.order.order.service.ReceiptService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

@@ -1,7 +1,7 @@
 package cn.lili.cache.limit.interceptor;
 
-import cn.lili.cache.limit.enums.LimitTypeEnums;
 import cn.lili.cache.limit.annotation.LimitPoint;
+import cn.lili.cache.limit.enums.LimitTypeEnums;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 import com.google.common.collect.ImmutableList;

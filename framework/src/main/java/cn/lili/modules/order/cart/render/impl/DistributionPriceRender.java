@@ -58,22 +58,20 @@ public class DistributionPriceRender implements CartRenderStep {
         //循环订单商品列表，如果是分销商品则计算商品佣金
         tradeDTO.setDistributionId(distributionId);
 
-        List<String> skuIds = tradeDTO.getSkuList().stream().map(cartSkuVO -> {
+        List<String> skuIds = tradeDTO.getCheckedSkuList().stream().map(cartSkuVO -> {
             return cartSkuVO.getGoodsSku().getId();
         }).collect(Collectors.toList());
         //是否包含分销商品
         List<DistributionGoods> distributionGoods = distributionGoodsService.distributionGoods(skuIds);
-        if (distributionGoods != null && distributionGoods.size() > 0) {
-            distributionGoods.forEach(dg -> {
-                tradeDTO.getSkuList().forEach(cartSkuVO -> {
-                    if (cartSkuVO.getGoodsSku().getId().equals(dg.getSkuId())) {
-                        cartSkuVO.setDistributionGoods(dg);
-                    }
-                });
-            });
+        if (distributionGoods != null && !distributionGoods.isEmpty()) {
+            distributionGoods.forEach(dg -> tradeDTO.getCheckedSkuList().forEach(cartSkuVO -> {
+                if (cartSkuVO.getGoodsSku().getId().equals(dg.getSkuId())) {
+                    cartSkuVO.setDistributionGoods(dg);
+                }
+            }));
         }
 
-        for (CartSkuVO cartSkuVO : tradeDTO.getSkuList()) {
+        for (CartSkuVO cartSkuVO : tradeDTO.getCheckedSkuList()) {
             if (cartSkuVO.getDistributionGoods() != null) {
                 cartSkuVO.getPriceDetailDTO().setDistributionCommission(CurrencyUtil.mul(cartSkuVO.getNum(), cartSkuVO.getDistributionGoods().getCommission()));
             }

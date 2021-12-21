@@ -28,7 +28,7 @@ public class CheckedFilterRender implements CartRenderStep {
     @Override
     public void render(TradeDTO tradeDTO) {
         //将购物车到sku未选择信息过滤
-        List<CartSkuVO> collect = tradeDTO.getSkuList().parallelStream().filter(i -> Boolean.TRUE.equals(i.getChecked())).collect(Collectors.toList());
+        List<CartSkuVO> collect = tradeDTO.getSkuList().stream().filter(i -> Boolean.TRUE.equals(i.getChecked())).collect(Collectors.toList());
         tradeDTO.setSkuList(collect);
 
         //购物车信息过滤
@@ -36,7 +36,7 @@ public class CheckedFilterRender implements CartRenderStep {
         //循环购物车信息
         for (CartVO cartVO : tradeDTO.getCartList()) {
             //如果商品选中，则加入到对应购物车
-            cartVO.setSkuList(cartVO.getSkuList().stream().filter(j -> Boolean.TRUE.equals(j.getChecked())).collect(Collectors.toList()));
+            cartVO.setSkuList(cartVO.getCheckedSkuList());
             cartVOList.add(cartVO);
         }
         tradeDTO.setCartList(cartVOList);

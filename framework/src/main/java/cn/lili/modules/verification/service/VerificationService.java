@@ -1,6 +1,6 @@
 package cn.lili.modules.verification.service;
 
-import cn.lili.modules.verification.enums.VerificationEnums;
+import cn.lili.modules.verification.entity.enums.VerificationEnums;
 
 import java.io.IOException;
 import java.util.Map;
@@ -20,7 +20,7 @@ public interface VerificationService {
      * @return 校验对象
      * @throws IOException 校验错误
      */
-    Map<String, Object> createVerification(VerificationEnums verificationEnums, String uuid) throws IOException;
+    Map<String, Object> createVerification(VerificationEnums verificationEnums, String uuid);
 
     /**
      * 预校验
