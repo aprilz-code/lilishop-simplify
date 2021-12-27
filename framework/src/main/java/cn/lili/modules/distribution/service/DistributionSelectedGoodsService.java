@@ -2,7 +2,6 @@ package cn.lili.modules.distribution.service;
 
 import cn.lili.modules.distribution.entity.dos.DistributionSelectedGoods;
 import com.baomidou.mybatisplus.extension.service.IService;
-
 /**
  * 分销选择商品业务层
  *
@@ -24,4 +23,11 @@ public interface DistributionSelectedGoodsService extends IService<DistributionS
      * @return
      */
     boolean delete(String distributionGoodsId);
+
+    /**
+     * 分销员添加分销商品
+     * @param distributionGoodsId 分销商品ID
+     * @return
+     */
+    boolean deleteByDistributionGoodsId(String distributionGoodsId);
 }

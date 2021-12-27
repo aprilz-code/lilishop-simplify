@@ -9,7 +9,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Date;
 
 /**
@@ -26,9 +25,6 @@ public class CouponSearchParams extends BasePromotionsSearchParams implements Se
 
     private static final String PRICE_COLUMN = "price";
     private static final String RANGE_DAY_TYPE_COLUMN = "range_day_type";
-
-    @ApiModelProperty(value = "店铺编号")
-    private String storeId;
 
     @ApiModelProperty(value = "会员id")
     private String memberId;
@@ -66,12 +62,10 @@ public class CouponSearchParams extends BasePromotionsSearchParams implements Se
     @ApiModelProperty(value = "会员优惠券状态")
     private String memberCouponStatus;
 
+
     @Override
     public <T> QueryWrapper<T> queryWrapper() {
-        QueryWrapper<T> queryWrapper = new QueryWrapper<>();
-        if (storeId != null) {
-            queryWrapper.in("store_id", Arrays.asList(storeId.split(",")));
-        }
+        QueryWrapper<T> queryWrapper = super.queryWrapper();
         if (CharSequenceUtil.isNotEmpty(couponName)) {
             queryWrapper.like("coupon_name", couponName);
         }
@@ -96,8 +90,7 @@ public class CouponSearchParams extends BasePromotionsSearchParams implements Se
         if (CharSequenceUtil.isNotEmpty(this.getPromotionStatus())) {
             switch (PromotionsStatusEnum.valueOf(this.getPromotionStatus())) {
                 case NEW:
-                    queryWrapper.nested(i -> i.gt(PromotionTools.START_TIME_COLUMN, new Date()).gt(PromotionTools.END_TIME_COLUMN, new Date()))
-                    ;
+                    queryWrapper.nested(i -> i.gt(PromotionTools.START_TIME_COLUMN, new Date()).gt(PromotionTools.END_TIME_COLUMN, new Date()));
                     break;
                 case START:
                     queryWrapper.nested(i -> i.le(PromotionTools.START_TIME_COLUMN, new Date()).ge(PromotionTools.END_TIME_COLUMN, new Date()))

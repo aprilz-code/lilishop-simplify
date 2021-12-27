@@ -2,8 +2,8 @@ package cn.lili.consumer.timetask.handler.impl.statistics;
 
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
-import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.properties.StatisticsProperties;
+import cn.lili.common.security.enums.UserEnums;
 import cn.lili.consumer.timetask.handler.EveryHourExecute;
 import cn.lili.modules.statistics.entity.vo.OnlineMemberVO;
 import org.springframework.beans.factory.annotation.Autowired;

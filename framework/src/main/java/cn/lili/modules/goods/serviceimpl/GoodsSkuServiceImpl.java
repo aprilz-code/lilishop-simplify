@@ -2,6 +2,8 @@ package cn.lili.modules.goods.serviceimpl;
 
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
@@ -218,23 +220,20 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         Map<String, Object> map = new HashMap<>(16);
         //获取商品VO
         GoodsVO goodsVO = goodsService.getGoodsVO(goodsId);
+        //如果skuid为空，则使用商品VO中sku信息获取
+        if (CharSequenceUtil.isEmpty(skuId) || "undefined".equals(skuId)) {
+            skuId = goodsVO.getSkuList().get(0).getId();
+        }
         //从缓存拿商品Sku
         GoodsSku goodsSku = this.getGoodsSkuByIdFromCache(skuId);
-
-
-        //如果规格为空则使用商品ID进行查询
-        if (goodsSku == null) {
-            skuId = goodsVO.getSkuList().get(0).getId();
-            goodsSku = this.getGoodsSkuByIdFromCache(skuId);
-            //如果使用商品ID无法查询SKU则返回错误
-            if (goodsSku == null) {
-                throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
-            }
+        //如果使用商品ID无法查询SKU则返回错误
+        if (goodsVO == null || goodsSku == null) {
+            throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
         }
 
-        //商品为空||商品下架||商品未审核通过||商品删除，则提示：商品已下架
-        if (goodsVO == null || goodsVO.getMarketEnable().equals(GoodsStatusEnum.DOWN.name())
-                || !goodsVO.getAuthFlag().equals(GoodsAuthEnum.PASS.name())
+        //商品下架||商品未审核通过||商品删除，则提示：商品已下架
+        if (GoodsStatusEnum.DOWN.name().equals(goodsVO.getMarketEnable())
+                || !GoodsAuthEnum.PASS.name().equals(goodsVO.getAuthFlag())
                 || Boolean.TRUE.equals(goodsVO.getDeleteFlag())) {
             throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
         }
@@ -242,7 +241,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         //获取当前商品的索引信息
         EsGoodsIndex goodsIndex = goodsIndexService.findById(skuId);
         if (goodsIndex == null) {
-            goodsIndex = goodsIndexService.resetEsGoodsIndex(goodsSku, goodsVO.getGoodsParamsDTOList());
+            goodsIndex = goodsIndexService.getTempEsGoodsIndex(goodsSku, goodsVO.getGoodsParamsDTOList());
 
             //发送mq消息
             String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.RESET_GOODS_INDEX.name();
@@ -534,15 +533,39 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
     }
 
     /**
+     * 根据商品id获取全部skuId的集合
+     *
+     * @param goodsId goodsId
+     * @return 全部skuId的集合
+     */
+    @Override
+    public List<String> getSkuIdsByGoodsId(String goodsId) {
+        return this.baseMapper.getGoodsSkuIdByGoodsId(goodsId);
+    }
+
+    /**
      * 发送生成ES商品索引
      *
      * @param goods 商品信息
      */
     @Override
     public void generateEs(Goods goods) {
-        String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.GENERATOR_GOODS_INDEX.name();
-        //发送mq消息
-        rocketMQTemplate.asyncSend(destination, goods.getId(), RocketmqSendCallbackBuilder.commonCallback());
+        // 不生成没有审核通过且没有上架的商品
+        if (!GoodsStatusEnum.UPPER.name().equals(goods.getMarketEnable()) || !GoodsAuthEnum.PASS.name().equals(goods.getAuthFlag())) {
+            return;
+        }
+        ThreadUtil.execAsync(() -> {
+            try {
+                // 延时执行，防止商品未保存完成就去生成商品索引导致生成索引时找不到商品问题
+                Thread.sleep(2000);
+                String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.GENERATOR_GOODS_INDEX.name();
+                //发送mq消息
+                rocketMQTemplate.asyncSend(destination, goods.getId(), RocketmqSendCallbackBuilder.commonCallback());
+            } catch (InterruptedException e) {
+                log.error("发送商品索引信息失败！", e);
+                Thread.currentThread().interrupt();
+            }
+        });
     }
 
     /**

@@ -20,9 +20,12 @@ import cn.lili.modules.order.cart.entity.vo.CartVO;
 import cn.lili.modules.order.cart.render.CartRenderStep;
 import cn.lili.modules.order.order.entity.dos.Order;
 import cn.lili.modules.order.order.service.OrderService;
+import cn.lili.modules.promotion.entity.dos.Coupon;
 import cn.lili.modules.promotion.entity.dos.Pintuan;
 import cn.lili.modules.promotion.entity.dos.PointsGoods;
 import cn.lili.modules.promotion.entity.dto.BasePromotions;
+import cn.lili.modules.promotion.entity.vos.CouponVO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +42,7 @@ import java.util.stream.Collectors;
  * @since 2020-07-02 14:47
  */
 @Service
+@Slf4j
 public class CheckDataRender implements CartRenderStep {
 
     @Autowired
@@ -114,13 +118,15 @@ public class CheckDataRender implements CartRenderStep {
                 cartSkuVO.setErrorMessage("商品库存不足,现有库存数量[" + dataSku.getQuantity() + "]");
             }
             //移除无效促销活动
-            cartSkuVO.setPromotionMap(cartSkuVO.getPromotionMap().entrySet().stream().filter(i -> {
-                BasePromotions basePromotions = (BasePromotions) i.getValue();
-                if (basePromotions.getStartTime() != null && basePromotions.getEndTime() != null) {
-                    return basePromotions.getStartTime().getTime() <= System.currentTimeMillis() && basePromotions.getEndTime().getTime() >= System.currentTimeMillis();
-                }
-                return true;
-            }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+            if (cartSkuVO.getPromotionMap() != null && !cartSkuVO.getPromotionMap().isEmpty()) {
+                cartSkuVO.setPromotionMap(cartSkuVO.getPromotionMap().entrySet().stream().filter(i -> {
+                    BasePromotions basePromotions = (BasePromotions) i.getValue();
+                    if (basePromotions.getStartTime() != null && basePromotions.getEndTime() != null) {
+                        return basePromotions.getStartTime().getTime() <= System.currentTimeMillis() && basePromotions.getEndTime().getTime() >= System.currentTimeMillis();
+                    }
+                    return true;
+                }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+            }
         }
     }
 
@@ -142,6 +148,16 @@ public class CheckDataRender implements CartRenderStep {
                     cartVO.setDeliveryMethod(DeliveryMethodEnum.LOGISTICS.name());
                 }
                 cartVO.setSkuList(storeCart.getValue());
+                try {
+                    //筛选属于当前店铺的优惠券
+                    storeCart.getValue().forEach(i -> i.getPromotionMap().forEach((key, value) -> {
+                        if (key.contains(PromotionTypeEnum.COUPON.name()) && ((Coupon) value).getStoreId().equals(storeCart.getKey())) {
+                            cartVO.getCanReceiveCoupon().add(new CouponVO((Coupon) value));
+                        }
+                    }));
+                } catch (Exception e) {
+                    log.error("筛选属于当前店铺的优惠券发生异常！", e);
+                }
                 storeCart.getValue().stream().filter(i -> Boolean.TRUE.equals(i.getChecked())).findFirst().ifPresent(cartSkuVO -> cartVO.setChecked(true));
                 cartList.add(cartVO);
             }
@@ -170,18 +186,20 @@ public class CheckDataRender implements CartRenderStep {
                 }
             }
             //判断拼团商品的限购数量
-            Optional<Map.Entry<String, Object>> pintuanPromotions = tradeDTO.getSkuList().get(0).getPromotionMap().entrySet().stream().filter(i -> i.getKey().contains(PromotionTypeEnum.PINTUAN.name())).findFirst();
-            if (pintuanPromotions.isPresent()) {
-                Pintuan pintuan = (Pintuan) pintuanPromotions.get().getValue();
-                Integer limitNum = pintuan.getLimitNum();
-                for (CartSkuVO cartSkuVO : tradeDTO.getSkuList()) {
-                    if (limitNum != 0 && cartSkuVO.getNum() > limitNum) {
-                        throw new ServiceException(ResultCode.PINTUAN_LIMIT_NUM_ERROR);
+            if (tradeDTO.getSkuList().get(0).getPromotionMap() != null && !tradeDTO.getSkuList().get(0).getPromotionMap().isEmpty()) {
+                Optional<Map.Entry<String, Object>> pintuanPromotions = tradeDTO.getSkuList().get(0).getPromotionMap().entrySet().stream().filter(i -> i.getKey().contains(PromotionTypeEnum.PINTUAN.name())).findFirst();
+                if (pintuanPromotions.isPresent()) {
+                    Pintuan pintuan = (Pintuan) pintuanPromotions.get().getValue();
+                    Integer limitNum = pintuan.getLimitNum();
+                    for (CartSkuVO cartSkuVO : tradeDTO.getSkuList()) {
+                        if (limitNum != 0 && cartSkuVO.getNum() > limitNum) {
+                            throw new ServiceException(ResultCode.PINTUAN_LIMIT_NUM_ERROR);
+                        }
                     }
                 }
             }
             //积分商品，判断用户积分是否满足
-        } else if (tradeDTO.getCartTypeEnum().equals(CartTypeEnum.POINTS)) {
+        } else if (tradeDTO.getCartTypeEnum().equals(CartTypeEnum.POINTS) && tradeDTO.getSkuList().get(0).getPromotionMap() != null && !tradeDTO.getSkuList().get(0).getPromotionMap().isEmpty())  {
             //获取积分商品VO
             Optional<Map.Entry<String, Object>> pointsPromotions = tradeDTO.getSkuList().get(0).getPromotionMap().entrySet().stream().filter(i -> i.getKey().contains(PromotionTypeEnum.POINTS_GOODS.name())).findFirst();
             if (pointsPromotions.isPresent()) {

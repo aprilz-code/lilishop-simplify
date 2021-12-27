@@ -80,6 +80,13 @@ public interface EsGoodsIndexService {
     void deleteIndexById(String id);
 
     /**
+     * 删除索引
+     *
+     * @param ids 商品索引id集合
+     */
+    void deleteIndexByIds(List<String> ids);
+
+    /**
      * 初始化商品索引
      *
      * @param goodsIndexList 商品索引列表
@@ -169,11 +176,11 @@ public interface EsGoodsIndexService {
     List<String> getPromotionIdByPromotionType(String id, PromotionTypeEnum promotionTypeEnum);
 
     /**
-     * 重置当前商品索引
+     * 获取临时拼装的商品索引
      *
      * @param goodsSku       商品sku信息
      * @param goodsParamDTOS 商品参数
      * @return 商品索引
      */
-    EsGoodsIndex resetEsGoodsIndex(GoodsSku goodsSku, List<GoodsParamsDTO> goodsParamDTOS);
+    EsGoodsIndex getTempEsGoodsIndex(GoodsSku goodsSku, List<GoodsParamsDTO> goodsParamDTOS);
 }

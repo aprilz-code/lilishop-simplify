@@ -28,6 +28,7 @@ import cn.lili.modules.promotion.entity.dos.Seckill;
 import cn.lili.modules.promotion.entity.dto.BasePromotions;
 import cn.lili.modules.promotion.entity.enums.PromotionsStatusEnum;
 import cn.lili.modules.promotion.service.PromotionService;
+import cn.lili.modules.promotion.tools.PromotionTools;
 import cn.lili.modules.search.entity.dos.EsGoodsIndex;
 import cn.lili.modules.search.entity.dto.EsGoodsSearchDTO;
 import cn.lili.modules.search.repository.EsGoodsIndexRepository;
@@ -48,8 +49,11 @@ import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.mybatis.spring.MyBatisSystemException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchPage;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
@@ -99,6 +103,10 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
     @Autowired
     private Cache<Object> cache;
 
+    @Autowired
+    @Qualifier("elasticsearchRestTemplate")
+    private ElasticsearchRestTemplate restTemplate;
+
     @Override
     public void init() {
         //获取索引任务标识
@@ -118,22 +126,19 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
 
         ThreadUtil.execAsync(() -> {
             try {
-                //查询商品信息
-                LambdaQueryWrapper<GoodsSku> queryWrapper = new LambdaQueryWrapper<>();
-                queryWrapper.eq(GoodsSku::getAuthFlag, GoodsAuthEnum.PASS.name());
-                queryWrapper.eq(GoodsSku::getMarketEnable, GoodsStatusEnum.UPPER.name());
-
                 List<EsGoodsIndex> esGoodsIndices = new ArrayList<>();
 
                 LambdaQueryWrapper<Goods> goodsQueryWrapper = new LambdaQueryWrapper<>();
                 goodsQueryWrapper.eq(Goods::getAuthFlag, GoodsAuthEnum.PASS.name());
                 goodsQueryWrapper.eq(Goods::getMarketEnable, GoodsStatusEnum.UPPER.name());
+                goodsQueryWrapper.eq(Goods::getDeleteFlag, false);
 
                 for (Goods goods : goodsService.list(goodsQueryWrapper)) {
                     LambdaQueryWrapper<GoodsSku> skuQueryWrapper = new LambdaQueryWrapper<>();
                     skuQueryWrapper.eq(GoodsSku::getGoodsId, goods.getId());
                     skuQueryWrapper.eq(GoodsSku::getAuthFlag, GoodsAuthEnum.PASS.name());
                     skuQueryWrapper.eq(GoodsSku::getMarketEnable, GoodsStatusEnum.UPPER.name());
+                    skuQueryWrapper.eq(GoodsSku::getDeleteFlag, false);
 
                     List<GoodsSku> goodsSkuList = goodsSkuService.list(skuQueryWrapper);
                     int skuSource = 100;
@@ -288,6 +293,19 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
         goodsIndexRepository.deleteById(id);
     }
 
+    /**
+     * 删除索引
+     *
+     * @param ids 商品索引id集合
+     */
+    @Override
+    public void deleteIndexByIds(List<String> ids) {
+        NativeSearchQueryBuilder queryBuilder = new NativeSearchQueryBuilder();
+        queryBuilder.withQuery(QueryBuilders.termsQuery("id", ids.toArray()));
+        this.restTemplate.delete(queryBuilder.build(), EsGoodsIndex.class);
+
+    }
+
     @Override
     public void initIndex(List<EsGoodsIndex> goodsIndexList) {
         if (goodsIndexList == null || goodsIndexList.isEmpty()) {
@@ -317,7 +335,7 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
         resultMap.put(KEY_SUCCESS, 0);
         resultMap.put(KEY_FAIL, 0);
         resultMap.put(KEY_PROCESSED, 0);
-        cache.put(CachePrefix.INIT_INDEX_PROCESS.getPrefix() + "", resultMap);
+        cache.put(CachePrefix.INIT_INDEX_PROCESS.getPrefix(), resultMap);
         if (!goodsIndexList.isEmpty()) {
             goodsIndexRepository.deleteAll();
             for (EsGoodsIndex goodsIndex : goodsIndexList) {
@@ -393,7 +411,7 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
     public void updateEsGoodsIndexAllByList(BasePromotions promotion, String key) {
         List<EsGoodsIndex> goodsIndices = new ArrayList<>();
         //如果storeId不为空，则表示是店铺活动
-        if (promotion.getStoreId() != null) {
+        if (promotion.getStoreId() != null && !promotion.getStoreId().equals(PromotionTools.PLATFORM_ID)) {
             EsGoodsSearchDTO searchDTO = new EsGoodsSearchDTO();
             searchDTO.setStoreId(promotion.getStoreId());
             //查询出店铺商品
@@ -482,17 +500,13 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
             //获取商品索引
             if (promotionMap != null && !promotionMap.isEmpty()) {
                 //促销不为空则进行清洗
-                for (Map.Entry<String, Object> entry : promotionMap.entrySet()) {
-                    BasePromotions promotion = (BasePromotions) entry.getValue();
-                    //判定条件为活动已结束
-                    if (promotion.getEndTime() != null && promotion.getEndTime().getTime() < DateUtil.date().getTime()) {
-                        if (entry.getKey().contains(PromotionTypeEnum.SECKILL.name()) || entry.getKey().contains(PromotionTypeEnum.PINTUAN.name())) {
-                            goodsIndex.setPromotionPrice(goodsIndex.getPrice());
-                        }
-                        promotionMap.remove(entry.getKey());
+                promotionMap.entrySet().removeIf(i -> {
+                    BasePromotions promotion = (BasePromotions) i.getValue();
+                    if (i.getKey().contains(PromotionTypeEnum.SECKILL.name()) || i.getKey().contains(PromotionTypeEnum.PINTUAN.name())) {
+                        goodsIndex.setPromotionPrice(goodsIndex.getPrice());
                     }
-
-                }
+                    return promotion.getEndTime() != null && promotion.getEndTime().getTime() < DateUtil.date().getTime();
+                });
             }
         }
         goodsIndexRepository.saveAll(all);
@@ -555,17 +569,17 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
     }
 
     /**
-     * 重置当前商品索引
+     * 获取临时拼装的商品索引
      *
      * @param goodsSku       商品sku信息
      * @param goodsParamDTOS 商品参数
      * @return 商品索引
      */
     @Override
-    public EsGoodsIndex resetEsGoodsIndex(GoodsSku goodsSku, List<GoodsParamsDTO> goodsParamDTOS) {
+    public EsGoodsIndex getTempEsGoodsIndex(GoodsSku goodsSku, List<GoodsParamsDTO> goodsParamDTOS) {
         EsGoodsIndex index = new EsGoodsIndex(goodsSku, goodsParamDTOS);
         //获取活动信息
-        Map<String, Object> goodsCurrentPromotionMap = promotionService.getGoodsCurrentPromotionMap(index);
+        Map<String, Object> goodsCurrentPromotionMap = promotionService.getGoodsPromotionMap(index);
         //写入促销信息
         index.setPromotionMap(goodsCurrentPromotionMap);
         return index;
@@ -591,18 +605,10 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
             promotionMap = goodsIndex.getPromotionMap();
         }
         //如果活动已结束
-        if (promotion.getPromotionStatus().equals(PromotionsStatusEnum.END.name()) || promotion.getPromotionStatus().equals(PromotionsStatusEnum.CLOSE.name())) {
-            //如果存在活动
-            if (promotionMap.containsKey(key)) {
-                //删除活动
-                promotionMap.remove(key);
-            } else {
-                //不存在则说明是秒杀活动，尝试删除秒杀信息
-                this.removePromotionKey(key, promotionMap, PromotionTypeEnum.SECKILL.name());
-            }
+        if (promotion.getPromotionStatus().equals(PromotionsStatusEnum.END.name()) || promotion.getPromotionStatus().equals(PromotionsStatusEnum.CLOSE.name())) {//如果存在活动
+            //删除活动
+            promotionMap.remove(key);
         } else {
-            //添加促销活动前，如果是同一时间只可以有一个的活动，但商品索引的促销活动里存在其他（同一时间只可以有一个）的活动，则清除
-            this.removePromotionKey(key, promotionMap, PromotionTypeEnum.PINTUAN.name(), PromotionTypeEnum.SECKILL.name(), PromotionTypeEnum.FULL_DISCOUNT.name());
             promotionMap.put(key, promotion);
         }
         goodsIndex.setPromotionMap(promotionMap);
@@ -698,7 +704,7 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
             }
         }
         //促销索引
-        Map<String, Object> goodsCurrentPromotionMap = promotionService.getGoodsCurrentPromotionMap(index);
+        Map<String, Object> goodsCurrentPromotionMap = promotionService.getGoodsPromotionMap(index);
         index.setPromotionMap(goodsCurrentPromotionMap);
         return index;
     }

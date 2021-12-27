@@ -5,23 +5,16 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.utils.DateUtil;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.goods.entity.dos.GoodsSku;
 import cn.lili.modules.goods.service.GoodsSkuService;
-import cn.lili.modules.order.cart.entity.vo.CartSkuVO;
-import cn.lili.modules.promotion.entity.dos.Coupon;
-import cn.lili.modules.promotion.entity.dos.FullDiscount;
 import cn.lili.modules.promotion.entity.dos.PromotionGoods;
 import cn.lili.modules.promotion.entity.dos.SeckillApply;
 import cn.lili.modules.promotion.entity.enums.PromotionsScopeTypeEnum;
 import cn.lili.modules.promotion.entity.enums.PromotionsStatusEnum;
-import cn.lili.modules.promotion.entity.vos.BasePromotionsSearchParams;
 import cn.lili.modules.promotion.entity.vos.PromotionGoodsSearchParams;
 import cn.lili.modules.promotion.entity.vos.SeckillSearchParams;
 import cn.lili.modules.promotion.mapper.PromotionGoodsMapper;
-import cn.lili.modules.promotion.service.CouponService;
-import cn.lili.modules.promotion.service.FullDiscountService;
 import cn.lili.modules.promotion.service.PromotionGoodsService;
 import cn.lili.modules.promotion.service.SeckillApplyService;
 import cn.lili.modules.promotion.tools.PromotionTools;
@@ -37,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -49,6 +43,8 @@ import java.util.List;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper, PromotionGoods> implements PromotionGoodsService {
+
+    private static final String SKU_ID_COLUMN = "sku_id";
 
     /**
      * Redis
@@ -66,14 +62,8 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
     @Autowired
     private GoodsSkuService goodsSkuService;
 
-    @Autowired
-    private FullDiscountService fullDiscountService;
-
-    @Autowired
-    private CouponService couponService;
-
     @Override
-    public List<PromotionGoods> findNowSkuPromotion(String skuId) {
+    public List<PromotionGoods> findSkuValidPromotion(String skuId, String storeIds) {
 
         GoodsSku sku = goodsSkuService.getGoodsSkuByIdFromCache(skuId);
         if (sku == null) {
@@ -81,48 +71,13 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
         }
         QueryWrapper<PromotionGoods> queryWrapper = new QueryWrapper<>();
 
-        queryWrapper.eq("sku_id", skuId);
-        queryWrapper.and(PromotionTools.queryPromotionStatus(PromotionsStatusEnum.START));
-
-        List<PromotionGoods> promotionGoods = this.list(queryWrapper);
-
-
-        BasePromotionsSearchParams searchParams = new BasePromotionsSearchParams();
-        searchParams.setPromotionStatus(PromotionsStatusEnum.START.name());
-        searchParams.setScopeType(PromotionsScopeTypeEnum.ALL.name());
-        //单独检查，添加适用于全品类的满优惠活动
-        List<FullDiscount> fullDiscountVOS = this.fullDiscountService.listFindAll(searchParams);
-        for (FullDiscount fullDiscountVO : fullDiscountVOS) {
-            PromotionGoods p = new PromotionGoods(sku);
-            p.setPromotionId(fullDiscountVO.getId());
-            p.setPromotionType(PromotionTypeEnum.FULL_DISCOUNT.name());
-            p.setStartTime(fullDiscountVO.getStartTime());
-            p.setEndTime(fullDiscountVO.getEndTime());
-            promotionGoods.add(p);
-        }
-        //单独检查，添加适用于全品类的全平台或属于当前店铺的优惠券活动
-        List<Coupon> couponVOS = this.couponService.listFindAll(searchParams);
-        for (Coupon couponVO : couponVOS) {
-            PromotionGoods p = new PromotionGoods(sku);
-            p.setPromotionId(couponVO.getId());
-            p.setPromotionType(PromotionTypeEnum.COUPON.name());
-            p.setStartTime(couponVO.getStartTime());
-            p.setEndTime(couponVO.getEndTime());
-            promotionGoods.add(p);
-        }
-        return promotionGoods;
-    }
-
-    @Override
-    public void updatePromotion(CartSkuVO cartSkuVO) {
-        Date date = DateUtil.getCurrentDayEndTime();
-        //如果商品的促销更新时间在当前时间之前，则更新促销
-        if (cartSkuVO.getUpdatePromotionTime().before(date)) {
-            List<PromotionGoods> promotionGoods = this.findNowSkuPromotion(cartSkuVO.getGoodsSku().getId());
-            cartSkuVO.setPromotions(promotionGoods);
-            //下一次更新时间
-            cartSkuVO.setUpdatePromotionTime(date);
-        }
+        queryWrapper.and(i -> i.or(j -> j.eq(SKU_ID_COLUMN, skuId))
+                .or(n -> n.eq("scope_type", PromotionsScopeTypeEnum.ALL.name()))
+                .or(n -> n.and(k -> k.eq("scope_type", PromotionsScopeTypeEnum.PORTION_GOODS_CATEGORY.name())
+                        .and(l -> l.like("scope_id", sku.getCategoryPath())))));
+        queryWrapper.and(i -> i.or(PromotionTools.queryPromotionStatus(PromotionsStatusEnum.START)).or(PromotionTools.queryPromotionStatus(PromotionsStatusEnum.NEW)));
+        queryWrapper.in("store_id", Arrays.asList(storeIds.split(",")));
+        return this.list(queryWrapper);
     }
 
     @Override
@@ -162,7 +117,7 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
     @Override
     public PromotionGoods getValidPromotionsGoods(String skuId, List<String> promotionTypes) {
         QueryWrapper<PromotionGoods> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("sku_id", skuId);
+        queryWrapper.eq(SKU_ID_COLUMN, skuId);
         queryWrapper.in("promotion_type", promotionTypes);
         queryWrapper.and(PromotionTools.queryPromotionStatus(PromotionsStatusEnum.START));
         return this.getOne(queryWrapper, false);
@@ -178,7 +133,7 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
     @Override
     public Double getValidPromotionsGoodsPrice(String skuId, List<String> promotionTypes) {
         QueryWrapper<PromotionGoods> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("sku_id", skuId);
+        queryWrapper.eq(SKU_ID_COLUMN, skuId);
         queryWrapper.in("promotion_type", promotionTypes);
         queryWrapper.and(PromotionTools.queryPromotionStatus(PromotionsStatusEnum.START));
         return this.baseMapper.selectPromotionsGoodsPrice(queryWrapper);

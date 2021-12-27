@@ -304,6 +304,14 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         for (Goods goods : goodsList) {
             goodsSkuService.updateGoodsSkuStatus(goods);
         }
+
+        if (GoodsStatusEnum.DOWN.equals(goodsStatusEnum)) {
+
+            //商品删除消息
+            String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.GOODS_DELETE.name();
+            //发送mq消息
+            rocketMQTemplate.asyncSend(destination, JSONUtil.toJsonStr(goodsIds), RocketmqSendCallbackBuilder.commonCallback());
+        }
         return result;
     }
 
@@ -351,11 +359,12 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         for (Goods goods : goodsList) {
             //修改SKU状态
             goodsSkuService.updateGoodsSkuStatus(goods);
-            //商品删除消息
-            String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.GOODS_DELETE.name();
-            //发送mq消息
-            rocketMQTemplate.asyncSend(destination, JSONUtil.toJsonStr(goods), RocketmqSendCallbackBuilder.commonCallback());
         }
+
+        //商品删除消息
+        String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.GOODS_DELETE.name();
+        //发送mq消息
+        rocketMQTemplate.asyncSend(destination, JSONUtil.toJsonStr(goodsIds), RocketmqSendCallbackBuilder.commonCallback());
 
         return true;
     }
@@ -404,6 +413,19 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         double grade = NumberUtil.mul(NumberUtil.div(highPraiseNum, goods.getCommentNum().doubleValue(), 2), 100);
         goods.setGrade(grade);
         this.updateById(goods);
+    }
+
+    /**
+     * 更新商品的购买数量
+     *
+     * @param goodsId  商品ID
+     * @param buyCount 购买数量
+     */
+    @Override
+    public void updateGoodsBuyCount(String goodsId, int buyCount) {
+        this.update(new LambdaUpdateWrapper<Goods>()
+                .eq(Goods::getId, goodsId)
+                .set(Goods::getBuyCount, buyCount));
     }
 
     @Override
@@ -521,7 +543,9 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
     private LambdaUpdateWrapper<Goods> getUpdateWrapperByStoreAuthority() {
         LambdaUpdateWrapper<Goods> updateWrapper = new LambdaUpdateWrapper<>();
         AuthUser authUser = this.checkStoreAuthority();
-        updateWrapper.eq(Goods::getStoreId, authUser.getStoreId());
+        if (authUser != null) {
+            updateWrapper.eq(Goods::getStoreId, authUser.getStoreId());
+        }
         return updateWrapper;
     }
 
@@ -563,7 +587,9 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
     private LambdaUpdateWrapper<Goods> getUpdateWrapperByManagerAuthority() {
         LambdaUpdateWrapper<Goods> updateWrapper = new LambdaUpdateWrapper<>();
         AuthUser authUser = this.checkStoreAuthority();
-        updateWrapper.eq(Goods::getStoreId, authUser.getStoreId());
+        if (authUser != null) {
+            updateWrapper.eq(Goods::getStoreId, authUser.getStoreId());
+        }
         return updateWrapper;
     }
 
@@ -575,7 +601,9 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
     private LambdaQueryWrapper<Goods> getQueryWrapperByStoreAuthority() {
         LambdaQueryWrapper<Goods> queryWrapper = new LambdaQueryWrapper<>();
         AuthUser authUser = this.checkStoreAuthority();
-        queryWrapper.eq(Goods::getStoreId, authUser.getStoreId());
+        if (authUser != null) {
+            queryWrapper.eq(Goods::getStoreId, authUser.getStoreId());
+        }
         return queryWrapper;
     }
 

@@ -2,9 +2,9 @@ package cn.lili.consumer.trigger;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
+import cn.lili.common.utils.SpringContextUtil;
 import cn.lili.trigger.model.TimeTriggerMsg;
 import cn.lili.trigger.util.DelayQueueTools;
-import cn.lili.common.utils.SpringContextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
