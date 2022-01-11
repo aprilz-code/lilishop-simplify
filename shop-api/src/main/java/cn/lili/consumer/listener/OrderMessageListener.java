@@ -54,7 +54,6 @@ public class OrderMessageListener implements RocketMQListener<MessageExt> {
 
     /**
      * 订单状态变更
-     *
      * @param messageExt
      */
     public void orderStatusEvent(MessageExt messageExt) {

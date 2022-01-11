@@ -367,7 +367,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         //判断是否为拼团订单，进行特殊处理
         //判断订单类型进行不同的订单确认操作
         if (OrderPromotionTypeEnum.PINTUAN.name().equals(order.getOrderPromotionType())) {
-            this.checkPintuanOrder(order.getPromotionId(), order.getParentOrderSn());
+            String parentOrderSn = CharSequenceUtil.isEmpty(order.getParentOrderSn()) ? orderSn : order.getParentOrderSn();
+            this.checkPintuanOrder(order.getPromotionId(), parentOrderSn);
         } else {
             //判断订单类型
             if (order.getOrderType().equals(OrderTypeEnum.NORMAL.name())) {
@@ -789,10 +790,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
      * @param parentOrderSn 拼团父订单编号
      */
     private void checkPintuanOrder(String pintuanId, String parentOrderSn) {
-        //拼团有效参数判定
-        if (CharSequenceUtil.isEmpty(parentOrderSn)) {
-            return;
-        }
         //获取拼团配置
         Pintuan pintuan = pintuanService.getById(pintuanId);
         List<Order> list = this.getPintuanOrder(pintuanId, parentOrderSn);
@@ -800,7 +797,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (count == 1) {
             //如果为开团订单，则发布一个一小时的延时任务，时间到达后，如果未成团则自动结束（未开启虚拟成团的情况下）
             PintuanOrderMessage pintuanOrderMessage = new PintuanOrderMessage();
-            long startTime = DateUtil.offsetHour(new Date(), 1).getTime();
+            //开团结束时间
+//            long startTime = DateUtil.offsetHour(new Date(), 1).getTime();
+            long startTime = DateUtil.offsetMinute(new Date(), 2).getTime();
             pintuanOrderMessage.setOrderSn(parentOrderSn);
             pintuanOrderMessage.setPintuanId(pintuanId);
             TimeTriggerMsg timeTriggerMsg = new TimeTriggerMsg(TimeExecuteConstant.PROMOTION_EXECUTOR,
@@ -881,22 +880,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             Order parentOrder = this.getBySn(tradeDTO.getParentOrderSn());
             if (parentOrder.getMemberId().equals(UserContext.getCurrentUser().getId())) {
                 throw new ServiceException(ResultCode.PINTUAN_JOIN_ERROR);
-            }
-        }
-    }
-
-    /**
-     * 检查交易信息
-     *
-     * @param order 订单
-     */
-    private void checkOrder(Order order) {
-        //订单类型为拼团订单，检测购买数量是否超过了限购数量
-        if (OrderPromotionTypeEnum.PINTUAN.name().equals(order.getOrderType())) {
-            Pintuan pintuan = pintuanService.getById(order.getPromotionId());
-            Integer limitNum = pintuan.getLimitNum();
-            if (limitNum != 0 && order.getGoodsNum() > limitNum) {
-                throw new ServiceException(ResultCode.PINTUAN_LIMIT_NUM_ERROR);
             }
         }
     }

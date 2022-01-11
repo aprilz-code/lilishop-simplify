@@ -1,6 +1,7 @@
 package cn.lili.modules.member.serviceimpl;
 
 
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.member.entity.dos.Member;
@@ -45,8 +46,8 @@ public class MemberPointsHistoryServiceImpl extends ServiceImpl<MemberPointsHist
     @Override
     public IPage<MemberPointsHistory> MemberPointsHistoryList(PageVO page, String memberId, String memberName) {
         LambdaQueryWrapper<MemberPointsHistory> lambdaQueryWrapper = new LambdaQueryWrapper<MemberPointsHistory>()
-                .eq(memberId != null, MemberPointsHistory::getMemberId, memberId)
-                .like(memberName != null, MemberPointsHistory::getMemberName, memberName);
+                .eq(CharSequenceUtil.isNotEmpty(memberId), MemberPointsHistory::getMemberId, memberId)
+                .like(CharSequenceUtil.isNotEmpty(memberName), MemberPointsHistory::getMemberName, memberName);
         //如果排序为空，则默认创建时间倒序
         if (StringUtils.isEmpty(page.getSort())) {
             page.setSort("createTime");

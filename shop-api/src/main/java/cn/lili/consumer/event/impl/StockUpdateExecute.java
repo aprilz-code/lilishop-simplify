@@ -14,8 +14,8 @@ import cn.lili.modules.order.order.service.OrderService;
 import cn.lili.modules.promotion.entity.dos.KanjiaActivity;
 import cn.lili.modules.promotion.entity.dos.PromotionGoods;
 import cn.lili.modules.promotion.entity.dto.KanjiaActivityGoodsDTO;
+import cn.lili.modules.promotion.entity.dto.search.PromotionGoodsSearchParams;
 import cn.lili.modules.promotion.entity.vos.PointsGoodsVO;
-import cn.lili.modules.promotion.entity.vos.PromotionGoodsSearchParams;
 import cn.lili.modules.promotion.service.KanjiaActivityGoodsService;
 import cn.lili.modules.promotion.service.KanjiaActivityService;
 import cn.lili.modules.promotion.service.PointsGoodsService;
@@ -298,7 +298,7 @@ public class StockUpdateExecute implements OrderStatusChangeEvent {
                     pointsGoodsService.updateById(pointsGoodsVO);
                 } else {
                     PromotionGoodsSearchParams searchParams = new PromotionGoodsSearchParams();
-                    searchParams.setPromotionStatus(promotionTypeEnum.name());
+                    searchParams.setPromotionType(promotionTypeEnum.name());
                     searchParams.setPromotionId(orderItem.getPromotionId());
                     searchParams.setSkuId(orderItem.getSkuId());
                     PromotionGoods pGoods = promotionGoodsService.getPromotionsGoods(searchParams);

@@ -3,9 +3,7 @@ package cn.lili.modules.goods.serviceimpl;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.text.CharSequenceUtil;
-import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.NumberUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
@@ -33,7 +31,10 @@ import cn.lili.modules.member.entity.dos.FootPrint;
 import cn.lili.modules.member.entity.dos.MemberEvaluation;
 import cn.lili.modules.member.entity.enums.EvaluationGradeEnum;
 import cn.lili.modules.member.service.MemberEvaluationService;
+import cn.lili.modules.promotion.entity.dos.PromotionGoods;
+import cn.lili.modules.promotion.entity.dto.search.PromotionGoodsSearchParams;
 import cn.lili.modules.promotion.entity.enums.CouponGetEnum;
+import cn.lili.modules.promotion.service.PromotionGoodsService;
 import cn.lili.modules.search.entity.dos.EsGoodsAttribute;
 import cn.lili.modules.search.entity.dos.EsGoodsIndex;
 import cn.lili.modules.search.service.EsGoodsIndexService;
@@ -49,6 +50,8 @@ import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -104,6 +107,9 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
     @Autowired
     private EsGoodsIndexService goodsIndexService;
 
+    @Autowired
+    private PromotionGoodsService promotionGoodsService;
+
     @Override
     public void add(List<Map<String, Object>> skuList, Goods goods) {
         // 检查是否需要生成索引
@@ -117,7 +123,9 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         }
 
         this.updateStock(newSkuList);
-        generateEs(goods);
+        if (!newSkuList.isEmpty()) {
+            generateEs(goods);
+        }
     }
 
     @Override
@@ -134,9 +142,9 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
             //删除旧索引
             for (GoodsSkuVO goodsSkuVO : goodsListByGoodsId) {
                 oldSkuIds.add(goodsSkuVO.getId());
-                goodsIndexService.deleteIndexById(goodsSkuVO.getId());
                 cache.remove(GoodsSkuService.getCacheKeys(goodsSkuVO.getId()));
             }
+            goodsIndexService.deleteIndexByIds(oldSkuIds);
             this.removeByIds(oldSkuIds);
             //删除sku相册
             goodsGalleryService.removeByIds(oldSkuIds);
@@ -164,7 +172,9 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
             this.updateBatchById(newSkuList);
         }
         this.updateStock(newSkuList);
-        generateEs(goods);
+        if (GoodsAuthEnum.PASS.name().equals(goods.getAuthFlag()) && !newSkuList.isEmpty()) {
+            generateEs(goods);
+        }
     }
 
     /**
@@ -253,9 +263,6 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
 
         Map<String, Object> promotionMap = goodsIndex.getPromotionMap();
         //设置当前商品的促销价格
-        if (promotionMap != null && !promotionMap.isEmpty() && goodsIndex.getPromotionPrice() != null) {
-            goodsSkuDetail.setPromotionPrice(goodsIndex.getPromotionPrice());
-        }
         if (promotionMap != null && !promotionMap.isEmpty()) {
             promotionMap = promotionMap.entrySet().stream().parallel().filter(i -> {
                 JSONObject jsonObject = JSONUtil.parseObj(i.getValue());
@@ -265,11 +272,18 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
                         (jsonObject.get("endTime") == null || jsonObject.get("endTime", Date.class).getTime() >= System.currentTimeMillis());
             }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-            boolean containsPromotion = promotionMap.keySet().stream().anyMatch(i ->
-                    i.contains(PromotionTypeEnum.SECKILL.name()) || i.contains(PromotionTypeEnum.PINTUAN.name()));
-            if (containsPromotion && goodsIndex.getPromotionPrice() != null) {
-                goodsSkuDetail.setPromotionFlag(true);
-                goodsSkuDetail.setPromotionPrice(goodsIndex.getPromotionPrice());
+            Optional<Map.Entry<String, Object>> containsPromotion = promotionMap.entrySet().stream().filter(i ->
+                    i.getKey().contains(PromotionTypeEnum.SECKILL.name()) || i.getKey().contains(PromotionTypeEnum.PINTUAN.name())).findFirst();
+            if (containsPromotion.isPresent()) {
+                JSONObject jsonObject = JSONUtil.parseObj(containsPromotion.get().getValue());
+                PromotionGoodsSearchParams searchParams = new PromotionGoodsSearchParams();
+                searchParams.setSkuId(skuId);
+                searchParams.setPromotionId(jsonObject.get("id").toString());
+                PromotionGoods promotionsGoods = promotionGoodsService.getPromotionsGoods(searchParams);
+                if (promotionsGoods != null && promotionsGoods.getPrice() != null) {
+                    goodsSkuDetail.setPromotionFlag(true);
+                    goodsSkuDetail.setPromotionPrice(promotionsGoods.getPrice());
+                }
             } else {
                 goodsSkuDetail.setPromotionFlag(false);
                 goodsSkuDetail.setPromotionPrice(null);
@@ -319,7 +333,9 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
                 cache.remove(GoodsSkuService.getCacheKeys(sku.getId()));
                 cache.put(GoodsSkuService.getCacheKeys(sku.getId()), sku);
             }
-            generateEs(goods);
+            if (!goodsSkus.isEmpty()) {
+                generateEs(goods);
+            }
         }
     }
 
@@ -549,23 +565,15 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
      * @param goods 商品信息
      */
     @Override
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void generateEs(Goods goods) {
         // 不生成没有审核通过且没有上架的商品
         if (!GoodsStatusEnum.UPPER.name().equals(goods.getMarketEnable()) || !GoodsAuthEnum.PASS.name().equals(goods.getAuthFlag())) {
             return;
         }
-        ThreadUtil.execAsync(() -> {
-            try {
-                // 延时执行，防止商品未保存完成就去生成商品索引导致生成索引时找不到商品问题
-                Thread.sleep(2000);
-                String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.GENERATOR_GOODS_INDEX.name();
-                //发送mq消息
-                rocketMQTemplate.asyncSend(destination, goods.getId(), RocketmqSendCallbackBuilder.commonCallback());
-            } catch (InterruptedException e) {
-                log.error("发送商品索引信息失败！", e);
-                Thread.currentThread().interrupt();
-            }
-        });
+        String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.GENERATOR_GOODS_INDEX.name();
+        //发送mq消息
+        rocketMQTemplate.asyncSend(destination, goods.getId(), RocketmqSendCallbackBuilder.commonCallback());
     }
 
     /**
@@ -700,7 +708,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
                     }
                     //设置规格商品缩略图
                     //如果规格没有图片，则用商品图片复盖。有则增加规格图片，放在商品图片集合之前
-                    if (spec.getValue() != null && StrUtil.isNotEmpty(spec.getValue().toString())) {
+                    if (CharSequenceUtil.isNotEmpty(spec.getValue().toString())) {
                         thumbnail = goodsGalleryService.getGoodsGallery(images.get(0).get("url")).getThumbnail();
                         small = goodsGalleryService.getGoodsGallery(images.get(0).get("url")).getSmall();
                     }
