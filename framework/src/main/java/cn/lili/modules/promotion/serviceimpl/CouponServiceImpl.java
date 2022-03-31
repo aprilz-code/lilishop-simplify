@@ -42,7 +42,6 @@ import java.util.stream.Collectors;
  * @since 2020/8/21
  */
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class CouponServiceImpl extends AbstractPromotionsServiceImpl<CouponMapper, Coupon> implements CouponService {
 
     /**
@@ -88,6 +87,7 @@ public class CouponServiceImpl extends AbstractPromotionsServiceImpl<CouponMappe
     }
 
     @Override
+    @Transactional(rollbackFor = {Exception.class})
     public boolean removePromotions(List<String> ids) {
         //删除优惠券信息
         this.memberCouponService.closeMemberCoupon(ids);
@@ -156,6 +156,7 @@ public class CouponServiceImpl extends AbstractPromotionsServiceImpl<CouponMappe
      * @return 是否更新成功
      */
     @Override
+    @Transactional(rollbackFor = {Exception.class})
     public boolean updateStatus(List<String> ids, Long startTime, Long endTime) {
         List<Coupon> list = this.list(new LambdaQueryWrapper<Coupon>().in(Coupon::getId, ids).eq(Coupon::getRangeDayType, CouponRangeDayEnum.DYNAMICTIME.name()));
         if (!list.isEmpty()) {
@@ -221,6 +222,7 @@ public class CouponServiceImpl extends AbstractPromotionsServiceImpl<CouponMappe
     }
 
     @Override
+    @Transactional(rollbackFor = {Exception.class})
     public boolean updatePromotionsGoods(Coupon promotions) {
         boolean result = super.updatePromotionsGoods(promotions);
         if (!PromotionsStatusEnum.CLOSE.name().equals(promotions.getPromotionStatus()) &&

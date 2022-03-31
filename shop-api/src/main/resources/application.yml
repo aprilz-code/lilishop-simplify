@@ -3,12 +3,19 @@ server:
 
   servlet:
     context-path: /
-
-  tomcat:
-    uri-encoding: UTF-8
-    threads:
-      min-spare: 50
-      max: 1000
+  #
+  #  tomcat:
+  #    #最大链接数，默认不设置，默认是10000
+  #    max-connections: 6500
+  #    #最大等待队列长度，允许HTTP请求缓存到请求队列的最大个数，默认不限制
+  #    accept-count: 1000
+  #    threads:
+  #      #最少闲置
+  #      min-spare: 50
+  #      #最大线程数  ，默认是200
+  #      max: 800
+  netty:
+    connection-timeout:
 
 # 与Spring Boot 2一样，默认情况下，大多数端点都不通过http公开，我们公开了所有端点。对于生产，您应该仔细选择要公开的端点。
 management:
@@ -22,6 +29,8 @@ management:
       exposure:
         include: '*'
 spring:
+  main:
+    allow-bean-definition-overriding: true
   # 要在其中注册的Spring Boot Admin Server的URL。
   boot:
     admin:
@@ -34,28 +43,12 @@ spring:
       max-request-size: 20MB
   cache:
     type: redis
-  #JPA
-  jpa:
-    # 自动生成表结构
-    generate-ddl: true
-    open-in-view: false
   #jackson json解析
   jackson:
     time-zone: GMT+8
     serialization:
       #关闭jackson 对json做解析
       fail-on-empty-beans: false
-
-  # mongodb
-  data:
-    mongodb:
-      host: 127.0.0.1
-      port: 27017
-      database: lilishop
-      username: root
-      password: lilishop
-      authentication-database: admin
-  #      replica-set-name: mongoreplset
 
   # Redis
   redis:
@@ -83,10 +76,10 @@ spring:
         url: jdbc:mysql://127.0.0.1:3306/lilishop?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
         username: root
         password: lilishop
-        maxActive: 20
-        initialSize: 5
+        maxActive: 50
+        initialSize: 10
         maxWait: 60000
-        minIdle: 5
+        minIdle: 10
         timeBetweenEvictionRunsMillis: 60000
         minEvictableIdleTimeMillis: 300000
         validationQuery: SELECT 1 FROM DUAL
@@ -126,51 +119,54 @@ spring:
       sql:
         show: false
 
-# 忽略鉴权url
+# 忽略TOKEN 鉴权 的url
 ignored:
   urls:
     - /editor-app/**
-    - /actuator**
-    - /actuator/**
-    - /MP_verify_qSyvBPhDsPdxvOhC.txt
-    - /weixin/**
-    - /source/**
-    - /buyer/mini-program/**
-    - /buyer/cashier/**
-    - /buyer/pageData/**
-    - /buyer/article/**
-    - /buyer/goods/**
-    - /buyer/category/**
-    - /buyer/store/**
-    - /buyer/connect/**
-    - /buyer/members/**
-    - /buyer/promotion/pintuan/**
-    - /buyer/promotion/seckill/**
-    - /buyer/promotion/pointsGoods/**
-    - /buyer/promotion/coupon
-    - /buyer/memberEvaluation/**/goodsEvaluation
-    - /buyer/memberEvaluation/**/evaluationNumber
-    - /buyer/appVersion/**
-    - /buyer/broadcast/studio/**
-    - /store/login/**
-    - /manager/user/login
-    - /manager/user/refresh/**
-    - /druid/**
-    - /swagger-ui.html
-    - /doc.html
-    - /swagger-resources/**
-    - /swagger/**
-    - /webjars/**
-    - /v2/api-docs
-    - /configuration/ui
-    - /boot-admin
-    - /manager/promotion/seckill/init
-    - /**/*.js
-    - /**/*.css
-    - /**/*.png
-    - /**/*.ico
-    - /common/**
-
+      - /actuator**
+      - /actuator/**
+      - /MP_verify_qSyvBPhDsPdxvOhC.txt
+      - /weixin/**
+      - /source/**
+      - /store/passport/login/**
+      - /store/passport/login/refresh/**
+      - /common/common/slider/**
+      - /common/common/sms/**
+      - /buyer/payment/cashier/**
+      - /buyer/other/pageData/**
+      - /buyer/other/article/**
+      - /buyer/goods/**
+      - /buyer/store/**
+      - /buyer/passport/connect/**
+      - /buyer/members/**
+      - /buyer/passport/member/**
+      - /buyer/passport/member/refresh/**
+      - /buyer/promotion/pintuan/**
+      - /buyer/promotion/seckill/**
+      - /buyer/promotion/pointsGoods/**
+      - /buyer/promotion/coupon
+      - /buyer/member/evaluation/**/goodsEvaluation
+      - /buyer/member/evaluation/**/evaluationNumber
+      - /buyer/other/appVersion/**
+      - /buyer/broadcast/studio/**
+      - /manager/passport/user/login
+      - /manager/passport/user/refresh/**
+      - /manager/other/elasticsearch
+      - /manager/other/customWords
+      - /druid/**
+      - /swagger-ui.html
+      - /doc.html
+      - /swagger-resources/**
+      - /swagger/**
+      - /webjars/**
+      - /v2/api-docs**
+      - /configuration/ui
+      - /boot-admin
+      - /manager/promotion/seckill/init
+      - /**/*.js
+      - /**/*.css
+      - /**/*.png
+      - /**/*.ico
 
 # Swagger界面内容配置
 swagger:
@@ -194,37 +190,28 @@ mybatis-plus:
 
 # 日志
 logging:
+  config: classpath:logback-spring.xml
   # 输出级别
   level:
-    cn.lili: debug
-    org.springframework: info
-  #    org.springframework.data.mongodb.core: debug
+    root: info
+  #    org.springframework: debug
   file:
     # 指定路径
     path: lili-logs
-    # 最大保存天数
-    max-history: 7
-    # 每个文件最大大小
-    max-size: 5MB
+  logback:
+    rollingpolicy:
+      # 最大保存天数
+      max-history: 7
+      # 每个文件最大大小
+      max-file-size: 5MB
 #加密参数
 jasypt:
   encryptor:
     password: lili
 
 lili:
-  #验证码设置
-  verification-code:
-    #图形验证码有效时间 秒 包含滑块验证码有效时间， 以及验证通过之后，缓存中存储的验证结果有效时间
-    effectiveTime: 300
-    #水印
-    watermark: LILI-SHOP
-    #干扰项数量 最大2 默认0
-    interfereNum: 1
-    #允许误差像素
-    faultTolerant: 3
-  #短信模版配置
   system:
-    isDemoSite: false
+    isDemoSite: true
   statistics:
     # 在线人数统计 X 小时。这里设置48，即统计过去48小时每小时在线人数
     onlineMember: 48
@@ -274,7 +261,7 @@ lili:
     #        username: elastic
     #        password: LiLiShopES
     logstash:
-      server: 127.0.0.1:4560
+      server: 192.168.0.116:4560
     rocketmq:
       promotion-topic: lili_promotion_topic
       promotion-group: lili_promotion_group

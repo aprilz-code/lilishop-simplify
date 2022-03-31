@@ -6,6 +6,7 @@ import cn.lili.trigger.enums.DelayQueueEnums;
 import cn.lili.trigger.interfaces.TimeTrigger;
 import cn.lili.trigger.model.TimeTriggerMsg;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.ApplicationArguments;
 import org.springframework.stereotype.Component;
 
 /**
@@ -30,5 +31,10 @@ public class PromotionDelayQueueListen extends AbstractDelayQueueListen {
     @Override
     public String setDelayQueueName() {
         return DelayQueueEnums.PROMOTION.name();
+    }
+
+    @Override
+    public void run(ApplicationArguments args) throws Exception {
+        this.init();
     }
 }

@@ -37,7 +37,6 @@ import java.util.*;
  * @since 2020/8/21
  **/
 @Service
-@Transactional(rollbackFor = Exception.class)
 @Slf4j
 public class PointsGoodsServiceImpl extends AbstractPromotionsServiceImpl<PointsGoodsMapper, PointsGoods> implements PointsGoodsService {
 
@@ -66,6 +65,7 @@ public class PointsGoodsServiceImpl extends AbstractPromotionsServiceImpl<Points
 
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean savePointsGoodsBatch(List<PointsGoods> promotionsList) {
         List<PromotionGoods> promotionGoodsList = new ArrayList<>();
         for (PointsGoods pointsGoods : promotionsList) {
@@ -108,6 +108,7 @@ public class PointsGoodsServiceImpl extends AbstractPromotionsServiceImpl<Points
      * @return 是否更新成功
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean updatePromotions(PointsGoods promotions) {
         boolean result = false;
         this.checkStatus(promotions);
@@ -128,6 +129,7 @@ public class PointsGoodsServiceImpl extends AbstractPromotionsServiceImpl<Points
      * @return 是否移除成功
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean removePromotions(List<String> ids) {
         for (String id : ids) {
             PointsGoods pointsGoods = this.getById(id);
@@ -207,6 +209,7 @@ public class PointsGoodsServiceImpl extends AbstractPromotionsServiceImpl<Points
      * @return 是否更新成功
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean updatePromotionsGoods(PointsGoods promotions) {
         this.promotionGoodsService.deletePromotionGoods(Collections.singletonList(promotions.getId()));
         return this.promotionGoodsService.save(new PromotionGoods(promotions, this.checkSkuExist(promotions.getSkuId())));

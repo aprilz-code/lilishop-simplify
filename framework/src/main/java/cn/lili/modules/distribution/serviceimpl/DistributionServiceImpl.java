@@ -38,7 +38,6 @@ import java.util.concurrent.TimeUnit;
  * @since 2020-03-14 23:04:56
  */
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class DistributionServiceImpl extends ServiceImpl<DistributionMapper, Distribution> implements DistributionService {
 
     /**
@@ -70,6 +69,7 @@ public class DistributionServiceImpl extends ServiceImpl<DistributionMapper, Dis
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Distribution applyDistribution(DistributionApplyDTO distributionApplyDTO) {
 
         //检查分销开关
@@ -174,7 +174,7 @@ public class DistributionServiceImpl extends ServiceImpl<DistributionMapper, Dis
         //获取分销是否开启
         Setting setting = settingService.get(SettingEnum.DISTRIBUTION_SETTING.name());
         DistributionSetting distributionSetting = JSONUtil.toBean(setting.getSettingValue(), DistributionSetting.class);
-        if (!distributionSetting.getIsOpen()) {
+        if (Boolean.FALSE.equals(distributionSetting.getIsOpen())) {
             throw new ServiceException(ResultCode.DISTRIBUTION_CLOSE);
         }
     }

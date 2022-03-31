@@ -48,7 +48,6 @@ import java.util.stream.Collectors;
  * @since 2020/8/21
  */
 @Service
-@Transactional(rollbackFor = Exception.class)
 @Slf4j
 public class SeckillApplyServiceImpl extends ServiceImpl<SeckillApplyMapper, SeckillApply> implements SeckillApplyService {
 
@@ -145,6 +144,7 @@ public class SeckillApplyServiceImpl extends ServiceImpl<SeckillApplyMapper, Sec
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void addSeckillApply(String seckillId, String storeId, List<SeckillApplyVO> seckillApplyList) {
         Seckill seckill = this.seckillService.getById(seckillId);
         if (seckill == null) {
@@ -185,6 +185,7 @@ public class SeckillApplyServiceImpl extends ServiceImpl<SeckillApplyMapper, Sec
         if (!promotionGoodsList.isEmpty()) {
             PromotionGoodsSearchParams searchParams = new PromotionGoodsSearchParams();
             searchParams.setStoreId(storeId);
+            searchParams.setPromotionType(PromotionTypeEnum.SECKILL.name());
             searchParams.setSkuIds(promotionGoodsList.stream().map(PromotionGoods::getSkuId).collect(Collectors.toList()));
             promotionGoodsService.deletePromotionGoods(searchParams);
             //初始化促销商品
@@ -207,6 +208,7 @@ public class SeckillApplyServiceImpl extends ServiceImpl<SeckillApplyMapper, Sec
      * @param id        id
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void removeSeckillApply(String seckillId, String id) {
         Seckill seckill = this.seckillService.getById(seckillId);
         if (seckill == null) {
@@ -229,18 +231,61 @@ public class SeckillApplyServiceImpl extends ServiceImpl<SeckillApplyMapper, Sec
     }
 
     /**
-     * 更新秒杀商品库存
+     * 更新秒杀商品出售数量
      *
      * @param seckillId 秒杀活动id
      * @param skuId     商品skuId
-     * @param quantity  库存
+     * @param saleNum   库存
      */
     @Override
-    public void updateSeckillApplyQuantity(String seckillId, String skuId, Integer quantity) {
+    public void updateSeckillApplySaleNum(String seckillId, String skuId, Integer saleNum) {
         LambdaUpdateWrapper<SeckillApply> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(SeckillApply::getSeckillId, seckillId).eq(SeckillApply::getSkuId, skuId);
-        updateWrapper.set(SeckillApply::getQuantity, quantity);
+        updateWrapper.set(SeckillApply::getSalesNum, saleNum);
         this.update(updateWrapper);
+    }
+
+    /**
+     * 更新秒杀活动时间
+     *
+     * @param seckill 秒杀活动
+     * @return 是否更新成功
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateSeckillApplyTime(Seckill seckill) {
+        boolean result = false;
+        List<PromotionGoods> promotionGoodsList = new ArrayList<>();
+        LambdaQueryWrapper<SeckillApply> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SeckillApply::getSeckillId, seckill.getId());
+        List<SeckillApply> list = this.list(queryWrapper).stream().filter(i -> i.getTimeLine() != null && seckill.getHours().contains(i.getTimeLine().toString())).collect(Collectors.toList());
+        for (SeckillApply seckillApply : list) {
+            //获取参与活动的商品信息
+            GoodsSku goodsSku = goodsSkuService.getGoodsSkuByIdFromCache(seckillApply.getSkuId());
+            //获取促销商品
+            PromotionGoods promotionGoods = this.setSeckillGoods(goodsSku, seckillApply, seckill);
+            promotionGoodsList.add(promotionGoods);
+        }
+        //保存促销活动商品信息
+        if (!promotionGoodsList.isEmpty()) {
+            PromotionGoodsSearchParams searchParams = new PromotionGoodsSearchParams();
+            searchParams.setPromotionType(PromotionTypeEnum.SECKILL.name());
+            searchParams.setPromotionId(seckill.getId());
+            promotionGoodsService.deletePromotionGoods(searchParams);
+            //初始化促销商品
+            List<PromotionGoods> promotionGoods = PromotionTools.promotionGoodsInit(promotionGoodsList, seckill, PromotionTypeEnum.SECKILL);
+            result = promotionGoodsService.saveBatch(promotionGoods);
+            this.seckillService.updateEsGoodsSeckill(seckill, list);
+
+            LambdaQueryWrapper<SeckillApply> deleteWrapper = new LambdaQueryWrapper<>();
+            deleteWrapper.eq(SeckillApply::getSeckillId, seckill.getId());
+            deleteWrapper.notIn(SeckillApply::getSkuId, promotionGoodsList.stream().map(PromotionGoods::getSkuId).collect(Collectors.toList()));
+            this.remove(deleteWrapper);
+        }
+
+        seckillService.updateSeckillGoodsNum(seckill.getId());
+
+        return result;
     }
 
     /**
@@ -293,7 +338,7 @@ public class SeckillApplyServiceImpl extends ServiceImpl<SeckillApplyMapper, Sec
             Arrays.sort(hoursSored);
             for (int i = 0; i < hoursSored.length; i++) {
                 SeckillTimelineVO tempTimeline = new SeckillTimelineVO();
-                boolean hoursSoredHour = (hoursSored[i] >= hour || ((i + 1) < hoursSored.length && hoursSored[i + 1] > hour));
+                boolean hoursSoredHour = (hoursSored[i] >= hour || ((i + 1) < hoursSored.length && hoursSored[i + 1] > hour) || hoursSored.length == 1);
                 if (hoursSoredHour) {
                     SimpleDateFormat format = new SimpleDateFormat(DatePattern.NORM_DATE_PATTERN);
                     String date = format.format(new Date());
@@ -387,7 +432,11 @@ public class SeckillApplyServiceImpl extends ServiceImpl<SeckillApplyMapper, Sec
         //设置单独每个促销商品的结束时间
         DateTime startTime = DateUtil.offsetHour(DateUtil.beginOfDay(seckill.getStartTime()), seckillApply.getTimeLine());
         promotionGoods.setStartTime(startTime);
-        promotionGoods.setEndTime(seckill.getEndTime());
+        if (seckill.getEndTime() == null) {
+            promotionGoods.setEndTime(DateUtil.endOfDay(startTime));
+        } else {
+            promotionGoods.setEndTime(seckill.getEndTime());
+        }
         return promotionGoods;
     }
 

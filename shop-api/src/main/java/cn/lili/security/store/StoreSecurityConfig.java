@@ -7,10 +7,8 @@ import cn.lili.common.utils.SpringContextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -24,8 +22,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
  */
 @Slf4j
 @Configuration
-@EnableWebSecurity
-@Order(2)
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 public class StoreSecurityConfig extends WebSecurityConfigurerAdapter {
 
     /**
@@ -57,7 +54,6 @@ public class StoreSecurityConfig extends WebSecurityConfigurerAdapter {
                 //禁止网页iframe
                 .headers().frameOptions().disable()
                 .and()
-                .antMatcher("/store/**")
                 .logout()
                 .permitAll()
                 .and()

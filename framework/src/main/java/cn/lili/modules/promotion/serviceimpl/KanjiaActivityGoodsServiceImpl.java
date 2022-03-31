@@ -43,7 +43,6 @@ import java.util.List;
  * @since 2021/7/1
  */
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class KanjiaActivityGoodsServiceImpl extends AbstractPromotionsServiceImpl<KanJiaActivityGoodsMapper, KanjiaActivityGoods> implements KanjiaActivityGoodsService {
 
     /**
@@ -56,6 +55,7 @@ public class KanjiaActivityGoodsServiceImpl extends AbstractPromotionsServiceImp
     private PromotionGoodsService promotionGoodsService;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean add(KanjiaActivityGoodsOperationDTO kanJiaActivityGoodsOperationDTO) {
         List<KanjiaActivityGoods> kanjiaActivityGoodsList = new ArrayList<>();
         List<PromotionGoods> promotionGoodsList = new ArrayList<>();
@@ -244,6 +244,7 @@ public class KanjiaActivityGoodsServiceImpl extends AbstractPromotionsServiceImp
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateKanjiaActivityGoods(KanjiaActivityGoodsDTO kanJiaActivityGoodsDTO) {
         //校验砍价商品是否存在
         KanjiaActivityGoods dbKanJiaActivityGoods = this.getKanjiaGoodsDetail(kanJiaActivityGoodsDTO.getId());

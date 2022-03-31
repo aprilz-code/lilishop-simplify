@@ -1,4 +1,4 @@
-package cn.lili.controller.seller.settings;
+package cn.lili.controller.seller.other;
 
 
 import cn.lili.common.enums.ResultUtil;
@@ -25,7 +25,7 @@ import java.util.Objects;
  */
 @RestController
 @Api(tags = "店铺端,物流公司接口")
-@RequestMapping("/store/logistics")
+@RequestMapping("/store/other/logistics")
 public class LogisticsStoreController {
 
     /**

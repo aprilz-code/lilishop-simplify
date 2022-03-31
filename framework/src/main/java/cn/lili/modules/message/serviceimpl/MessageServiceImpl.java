@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
  * @since 2020/11/17 3:48 下午
  */
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> implements MessageService {
 
     @Autowired
@@ -39,6 +38,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
 
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean sendMessage(Message message) {
         //保存站内信信息
         this.save(message);

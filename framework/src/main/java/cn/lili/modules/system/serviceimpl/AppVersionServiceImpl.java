@@ -8,7 +8,6 @@ import cn.lili.modules.system.service.AppVersionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 
 /**
@@ -18,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
  * @since 2020/11/17 8:02 下午
  */
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class AppVersionServiceImpl extends ServiceImpl<AppVersionMapper, AppVersion> implements AppVersionService {
 
     @Override

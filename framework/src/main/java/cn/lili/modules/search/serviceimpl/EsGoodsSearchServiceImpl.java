@@ -14,6 +14,7 @@ import cn.lili.modules.search.entity.dto.EsGoodsSearchDTO;
 import cn.lili.modules.search.entity.dto.HotWordsDTO;
 import cn.lili.modules.search.entity.dto.ParamOptions;
 import cn.lili.modules.search.entity.dto.SelectorOptions;
+import cn.lili.modules.search.service.EsGoodsIndexService;
 import cn.lili.modules.search.service.EsGoodsSearchService;
 import com.alibaba.druid.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -74,6 +75,9 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
     @Autowired
     @Qualifier("elasticsearchRestTemplate")
     private ElasticsearchRestTemplate restTemplate;
+
+    @Autowired
+    private EsGoodsIndexService esGoodsIndexService;
     /**
      * 缓存
      */
@@ -82,6 +86,10 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
 
     @Override
     public SearchPage<EsGoodsIndex> searchGoods(EsGoodsSearchDTO searchDTO, PageVO pageVo) {
+        boolean exists = restTemplate.indexOps(EsGoodsIndex.class).exists();
+        if (!exists) {
+            esGoodsIndexService.init();
+        }
         if (CharSequenceUtil.isNotEmpty(searchDTO.getKeyword())) {
             cache.incrementScore(CachePrefix.HOT_WORD.getPrefix(), searchDTO.getKeyword());
         }
@@ -232,7 +240,8 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
 
             String brandName = "";
             if (brandBuckets.get(i).getAggregations() != null && brandBuckets.get(i).getAggregations().get(ATTR_BRAND_NAME) != null) {
-                brandName = this.getAggregationsBrandOptions(brandBuckets.get(i).getAggregations().get(ATTR_BRAND_NAME));
+                ParsedStringTerms aggregation = brandBuckets.get(i).getAggregations().get(ATTR_BRAND_NAME);
+                brandName = this.getAggregationsBrandOptions(aggregation);
                 if (StringUtils.isEmpty(brandName)) {
                     continue;
                 }
@@ -242,7 +251,8 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
             if (brandUrlBuckets != null && !brandUrlBuckets.isEmpty() &&
                     brandUrlBuckets.get(i).getAggregations() != null &&
                     brandUrlBuckets.get(i).getAggregations().get(ATTR_BRAND_URL) != null) {
-                brandUrl = this.getAggregationsBrandOptions(brandUrlBuckets.get(i).getAggregations().get(ATTR_BRAND_URL));
+                ParsedStringTerms aggregation = brandUrlBuckets.get(i).getAggregations().get(ATTR_BRAND_URL);
+                brandUrl = this.getAggregationsBrandOptions(aggregation);
                 if (StringUtils.isEmpty(brandUrl)) {
                     continue;
                 }

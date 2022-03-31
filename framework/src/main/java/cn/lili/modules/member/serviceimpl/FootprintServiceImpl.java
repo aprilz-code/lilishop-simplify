@@ -27,7 +27,6 @@ import java.util.Objects;
  * @since 2020/11/18 10:46 上午
  */
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class FootprintServiceImpl extends ServiceImpl<FootprintMapper, FootPrint> implements FootprintService {
 
     /**
@@ -37,6 +36,7 @@ public class FootprintServiceImpl extends ServiceImpl<FootprintMapper, FootPrint
     private EsGoodsSearchService esGoodsSearchService;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public FootPrint saveFootprint(FootPrint footPrint) {
         LambdaQueryWrapper<FootPrint> queryWrapper = Wrappers.lambdaQuery();
         queryWrapper.eq(FootPrint::getMemberId, footPrint.getMemberId());
@@ -70,8 +70,7 @@ public class FootprintServiceImpl extends ServiceImpl<FootprintMapper, FootPrint
         LambdaQueryWrapper<FootPrint> lambdaQueryWrapper = Wrappers.lambdaQuery();
         lambdaQueryWrapper.eq(FootPrint::getMemberId, UserContext.getCurrentUser().getId());
         lambdaQueryWrapper.in(FootPrint::getGoodsId, ids);
-        this.remove(lambdaQueryWrapper);
-        return true;
+        return this.remove(lambdaQueryWrapper);
     }
 
     @Override

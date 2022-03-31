@@ -21,7 +21,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,7 +34,6 @@ import java.util.Map;
  */
 @Service
 @Slf4j
-@Transactional(rollbackFor = Exception.class)
 public class WechatMessageServiceImpl extends ServiceImpl<WechatMessageMapper, WechatMessage> implements WechatMessageService {
 
     @Autowired
@@ -93,7 +91,7 @@ public class WechatMessageServiceImpl extends ServiceImpl<WechatMessageMapper, W
                 oldList.forEach(templateId -> {
                     Map<String, Object> params = new HashMap<>(1);
                     params.put("template_id", templateId);
-                    String message = WechatMessageUtil.wechatHandler(HttpUtil.post(delMsgTpl + accessToken, params));
+                    String message = WechatMessageUtil.wechatHandler(HttpUtils.doPostWithJson(delMsgTpl + accessToken, params));
                     log.info("删除模版请求:{},删除模版响应：{}", params, message);
                 });
             }

@@ -7,10 +7,8 @@ import cn.lili.common.utils.SpringContextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -26,8 +24,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 @Slf4j
 @Configuration
-@EnableWebSecurity
-@Order(4)
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 public class BuyerSecurityConfig extends WebSecurityConfigurerAdapter {
 
     /**

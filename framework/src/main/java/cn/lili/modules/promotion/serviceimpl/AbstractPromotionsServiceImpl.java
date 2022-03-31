@@ -1,5 +1,6 @@
 package cn.lili.modules.promotion.serviceimpl;
 
+import cn.hutool.core.map.MapBuilder;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.ResultCode;
@@ -10,6 +11,7 @@ import cn.lili.modules.promotion.entity.dos.BasePromotions;
 import cn.lili.modules.promotion.entity.dos.PromotionGoods;
 import cn.lili.modules.promotion.entity.dto.search.BasePromotionsSearchParams;
 import cn.lili.modules.promotion.entity.enums.PromotionsScopeTypeEnum;
+import cn.lili.modules.promotion.event.UpdateEsGoodsIndexPromotionsEvent;
 import cn.lili.modules.promotion.service.AbstractPromotionsService;
 import cn.lili.modules.promotion.service.PromotionGoodsService;
 import cn.lili.modules.promotion.tools.PromotionTools;
@@ -23,6 +25,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
@@ -31,7 +34,6 @@ import java.util.*;
  * @author paulG
  * @since 2021/11/30
  **/
-@Transactional(rollbackFor = Exception.class)
 public abstract class AbstractPromotionsServiceImpl<M extends BaseMapper<T>, T extends BasePromotions> extends ServiceImpl<M, T> implements AbstractPromotionsService<T> {
 
     /**
@@ -51,6 +53,9 @@ public abstract class AbstractPromotionsServiceImpl<M extends BaseMapper<T>, T e
      */
     @Autowired
     private RocketMQTemplate rocketMQTemplate;
+
+    @Autowired
+    private ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 通用促销保存
@@ -250,10 +255,11 @@ public abstract class AbstractPromotionsServiceImpl<M extends BaseMapper<T>, T e
     @Override
     public void updateEsGoodsIndex(T promotions) {
         if (promotions.getStartTime() == null && promotions.getEndTime() == null) {
+            Map<Object, Object> build = MapBuilder.create().put("promotionKey", this.getPromotionType() + "-" + promotions.getId()).put("scopeId", promotions.getScopeId()).build();
             //删除商品促销消息
             String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name();
             //发送mq消息
-            rocketMQTemplate.asyncSend(destination, JSONUtil.toJsonStr(promotions), RocketmqSendCallbackBuilder.commonCallback());
+            rocketMQTemplate.asyncSend(destination, JSONUtil.toJsonStr(build), RocketmqSendCallbackBuilder.commonCallback());
         } else {
 
             String esPromotionKey = this.getPromotionType().name() + "-" + promotions.getId();
@@ -264,10 +270,7 @@ public abstract class AbstractPromotionsServiceImpl<M extends BaseMapper<T>, T e
             map.put("promotionsType", promotions.getClass().getName());
             // 促销实体
             map.put("promotions", promotions);
-            //更新商品促销消息
-            String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.UPDATE_GOODS_INDEX_PROMOTIONS.name();
-            //发送mq消息
-            rocketMQTemplate.asyncSend(destination, JSONUtil.toJsonStr(map), RocketmqSendCallbackBuilder.commonCallback());
+            applicationEventPublisher.publishEvent(new UpdateEsGoodsIndexPromotionsEvent("更新商品索引促销事件", JSONUtil.toJsonStr(map)));
         }
     }
 

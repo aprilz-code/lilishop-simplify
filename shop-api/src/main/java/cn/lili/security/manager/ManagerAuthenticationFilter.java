@@ -1,6 +1,7 @@
 package cn.lili.security.manager;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.security.AuthUser;
@@ -33,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * 管理端token过滤
+ *
  * @author Chopper
  */
 @Slf4j
@@ -61,16 +64,19 @@ public class ManagerAuthenticationFilter extends BasicAuthenticationFilter {
         //获取用户信息，存入context
         UsernamePasswordAuthenticationToken authentication = getAuthentication(jwt, response);
         //自定义权限过滤
-        customAuthentication(request, response, authentication);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        if (authentication != null) {
+            customAuthentication(request, response, authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
         chain.doFilter(request, response);
     }
 
     /**
      * 自定义权限过滤
      *
-     * @param request
-     * @param authentication
+     * @param request        请求
+     * @param response       响应
+     * @param authentication 用户信息
      */
     private void customAuthentication(HttpServletRequest request, HttpServletResponse response, UsernamePasswordAuthenticationToken authentication) throws NoPermissionException {
         AuthUser authUser = (AuthUser) authentication.getDetails();
@@ -79,28 +85,25 @@ public class ManagerAuthenticationFilter extends BasicAuthenticationFilter {
 
         //如果不是超级管理员， 则鉴权
         if (!authUser.getIsSuper()) {
+            //获取缓存中的权限
             Map<String, List<String>> permission = (Map<String, List<String>>) cache.get(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.MANAGER) + authUser.getId());
-
-            System.out.println(requestUrl);
-            System.out.println(PatternMatchUtils.simpleMatch(permission.get(PermissionEnum.SUPER.name()).toArray(new String[0]), requestUrl));
-            System.out.println(PatternMatchUtils.simpleMatch(permission.get(PermissionEnum.QUERY.name()).toArray(new String[0]), requestUrl));
 
             //获取数据(GET 请求)权限
             if (request.getMethod().equals(RequestMethod.GET.name())) {
                 //如果用户的超级权限和查阅权限都不包含当前请求的api
-                if (PatternMatchUtils.simpleMatch(permission.get(PermissionEnum.SUPER.name()).toArray(new String[0]), requestUrl)
-                        || PatternMatchUtils.simpleMatch(permission.get(PermissionEnum.QUERY.name()).toArray(new String[0]), requestUrl)) {
+                if (match(permission.get(PermissionEnum.SUPER.name()), requestUrl) ||
+                        match(permission.get(PermissionEnum.QUERY.name()), requestUrl)) {
                 } else {
                     ResponseUtil.output(response, ResponseUtil.resultMap(false, 400, "权限不足"));
+                    log.error("当前请求路径：{},所拥有权限：{}", requestUrl, JSONUtil.toJsonStr(permission));
                     throw new NoPermissionException("权限不足");
                 }
             }
             //非get请求（数据操作） 判定鉴权
             else {
-                if (PatternMatchUtils.simpleMatch(permission.get(PermissionEnum.SUPER.name()).toArray(new String[0]), request.getRequestURI())) {
-
-                } else {
+                if (!match(permission.get(PermissionEnum.SUPER.name()), requestUrl)) {
                     ResponseUtil.output(response, ResponseUtil.resultMap(false, 400, "权限不足"));
+                    log.error("当前请求路径：{},所拥有权限：{}", requestUrl, JSONUtil.toJsonStr(permission));
                     throw new NoPermissionException("权限不足");
                 }
             }
@@ -108,11 +111,25 @@ public class ManagerAuthenticationFilter extends BasicAuthenticationFilter {
     }
 
     /**
+     * 校验权限
+     *
+     * @param permissions 权限集合
+     * @param url         请求地址
+     * @return 是否拥有权限
+     */
+    boolean match(List<String> permissions, String url) {
+        if (permissions == null || permissions.isEmpty()) {
+            return false;
+        }
+        return PatternMatchUtils.simpleMatch(permissions.toArray(new String[0]), url);
+    }
+
+    /**
      * 获取token信息
      *
-     * @param jwt
-     * @param response
-     * @return
+     * @param jwt      token信息
+     * @param response 响应
+     * @return 获取鉴权对象
      */
     private UsernamePasswordAuthenticationToken getAuthentication(String jwt, HttpServletResponse response) {
 
@@ -140,7 +157,7 @@ public class ManagerAuthenticationFilter extends BasicAuthenticationFilter {
         } catch (ExpiredJwtException e) {
             log.debug("user analysis exception:", e);
         } catch (Exception e) {
-            log.error("user analysis exception:", e);
+            log.error("other exception:", e);
         }
         return null;
     }

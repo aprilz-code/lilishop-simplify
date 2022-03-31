@@ -145,6 +145,7 @@ public interface MemberService extends IService<Member> {
      */
     IPage<MemberVO> getMemberPage(MemberSearchVO memberSearchVO, PageVO page);
 
+
     /**
      * 一键注册会员
      *
@@ -220,4 +221,26 @@ public interface MemberService extends IService<Member> {
      * @param userEnums token角色类型
      */
     void logout(UserEnums userEnums);
+
+    /**
+     * 获取所有会员的手机号
+     *
+     * @return 所有会员的手机号
+     */
+    List<String> getAllMemberMobile();
+
+    /**
+     * 更新会员登录时间为最新时间
+     *
+     * @param memberId 会员id
+     * @return 是否更新成功
+     */
+    boolean updateMemberLoginTime(String memberId);
+
+    /**
+     * 获取用户VO
+     * @param id 会员id
+     * @return 用户VO
+     */
+    MemberVO getMember(String id);
 }

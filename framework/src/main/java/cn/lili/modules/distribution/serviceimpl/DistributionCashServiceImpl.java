@@ -40,7 +40,6 @@ import java.util.Date;
  * @since 2020-03-126 18:04:56
  */
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class DistributionCashServiceImpl extends ServiceImpl<DistributionCashMapper, DistributionCash> implements DistributionCashService {
     /**
      * 分销员
@@ -58,6 +57,7 @@ public class DistributionCashServiceImpl extends ServiceImpl<DistributionCashMap
     private RocketmqCustomProperties rocketmqCustomProperties;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean cash(Double applyMoney) {
 
         //检查分销功能开关
@@ -76,7 +76,7 @@ public class DistributionCashServiceImpl extends ServiceImpl<DistributionCashMap
             distributionService.updateById(distribution);
             //提现申请记录
             DistributionCash distributionCash = new DistributionCash("D" + SnowFlake.getId(), distribution.getId(), applyMoney, distribution.getMemberName());
-            Boolean result = this.save(distributionCash);
+            boolean result = this.save(distributionCash);
             if (result) {
                 //发送提现消息
                 MemberWithdrawalMessage memberWithdrawalMessage = new MemberWithdrawalMessage();
@@ -110,6 +110,7 @@ public class DistributionCashServiceImpl extends ServiceImpl<DistributionCashMap
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public DistributionCash audit(String id, String result) {
 
         //检查分销功能开关
@@ -121,7 +122,7 @@ public class DistributionCashServiceImpl extends ServiceImpl<DistributionCashMap
         if (distributorCash != null) {
             //获取分销员
             Distribution distribution = distributionService.getById(distributorCash.getDistributionId());
-            if (distribution != null && distributorCash != null && distribution.getDistributionStatus().equals(DistributionStatusEnum.PASS.name())) {
+            if (distribution != null && distribution.getDistributionStatus().equals(DistributionStatusEnum.PASS.name())) {
                 MemberWithdrawalMessage memberWithdrawalMessage = new MemberWithdrawalMessage();
                 //审核通过
                 if (result.equals(WithdrawStatusEnum.VIA_AUDITING.name())) {

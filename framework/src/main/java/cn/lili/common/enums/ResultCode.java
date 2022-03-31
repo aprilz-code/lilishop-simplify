@@ -77,7 +77,7 @@ public enum ResultCode {
     MUST_HAVE_GOODS_SKU(11012, "规格必须要有一个！"),
     GOODS_PARAMS_ERROR(11013, "商品参数错误，刷新后重试"),
     PHYSICAL_GOODS_NEED_TEMP(11014, "实物商品需选择配送模板"),
-    VIRTUAL_GOODS_NOT_NEED_TEMP(11015, "实物商品需选择配送模板"),
+    VIRTUAL_GOODS_NOT_NEED_TEMP(11015, "虚拟商品无需选择配送模板"),
     GOODS_NOT_EXIST_STORE(11017, "当前用户无权操作此商品"),
     GOODS_TYPE_ERROR(11016, "需选择商品类型"),
 
@@ -115,8 +115,7 @@ public enum ResultCode {
     USER_AUTH_EXPIRED(20004, "用户已退出，请重新登录"),
     USER_AUTHORITY_ERROR(20005, "权限不足"),
     USER_CONNECT_LOGIN_ERROR(20006, "未找到登录信息"),
-    USER_NAME_EXIST(20007, "该用户名已被注册"),
-    USER_PHONE_EXIST(20008, "该手机号已被注册"),
+    USER_EXIST(20008, "该用户名或手机号已被注册"),
     USER_PHONE_NOT_EXIST(20009, "手机号不存在"),
     USER_PASSWORD_ERROR(20010, "密码不正确"),
     USER_NOT_PHONE(20011, "非当前用户的手机号"),
@@ -247,6 +246,7 @@ public enum ResultCode {
      * 活动
      */
     PROMOTION_GOODS_NOT_EXIT(40000, "当前促销商品不存在！"),
+    PROMOTION_GOODS_QUANTITY_NOT_EXIT(40020, "当前促销商品库存不足！"),
     PROMOTION_SAME_ACTIVE_EXIST(40001, "活动时间内已存在同类活动，请选择关闭、删除当前时段的活动"),
     PROMOTION_START_TIME_ERROR(40002, "活动起始时间不能小于当前时间"),
     PROMOTION_END_TIME_ERROR(40003, "活动结束时间不能小于当前时间"),

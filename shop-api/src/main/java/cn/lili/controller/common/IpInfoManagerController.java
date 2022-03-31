@@ -20,7 +20,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 @RestController
 @Api(tags = "获取IP信息以及天气")
-@RequestMapping("/common/ip")
+@RequestMapping("/common/common/ip")
 public class IpInfoManagerController {
     @Autowired
     private IpHelper ipHelper;
@@ -28,6 +28,7 @@ public class IpInfoManagerController {
     @RequestMapping(value = "/info", method = RequestMethod.GET)
     @ApiOperation(value = "IP及天气相关信息")
     public ResultMessage<Object> upload(HttpServletRequest request) {
+
         String result = ipHelper.getIpCity(request);
         return ResultUtil.data(result);
     }

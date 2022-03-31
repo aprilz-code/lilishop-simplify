@@ -132,20 +132,20 @@ public interface EsGoodsIndexService {
     void updateEsGoodsIndexAllByList(BasePromotions promotion, String key);
 
     /**
-     * 删除指定商品的促销信息
+     * 删除索引中指定的促销活动id的促销活动
      *
-     * @param skuIds        skuId列表
-     * @param promotionType 促销类型
+     * @param skuIds      商品skuId
+     * @param promotionsKey 促销活动Key
      */
-    void deleteEsGoodsPromotionIndexByList(List<String> skuIds, PromotionTypeEnum promotionType);
+    void deleteEsGoodsPromotionByPromotionKey(List<String> skuIds, String promotionsKey);
+
 
     /**
      * 删除索引中指定的促销活动id的促销活动
      *
-     * @param skuIds      商品skuId
-     * @param promotionId 促销活动Id
+     * @param promotionsKey 促销活动Key
      */
-    void deleteEsGoodsPromotionByPromotionId(List<String> skuIds, String promotionId);
+    void deleteEsGoodsPromotionByPromotionKey(String promotionsKey);
 
     /**
      * 清除所以商品索引的无效促销活动
@@ -178,11 +178,11 @@ public interface EsGoodsIndexService {
     List<String> getPromotionIdByPromotionType(String id, PromotionTypeEnum promotionTypeEnum);
 
     /**
-     * 获取临时拼装的商品索引
+     * 获取重置的商品索引
      *
      * @param goodsSku       商品sku信息
      * @param goodsParamDTOS 商品参数
      * @return 商品索引
      */
-    EsGoodsIndex getTempEsGoodsIndex(GoodsSku goodsSku, List<GoodsParamsDTO> goodsParamDTOS);
+    EsGoodsIndex getResetEsGoodsIndex(GoodsSku goodsSku, List<GoodsParamsDTO> goodsParamDTOS);
 }

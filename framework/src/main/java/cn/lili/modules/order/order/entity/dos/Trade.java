@@ -3,6 +3,7 @@ package cn.lili.modules.order.order.entity.dos;
 import cn.lili.common.utils.BeanUtil;
 import cn.lili.modules.order.cart.entity.dto.TradeDTO;
 import cn.lili.modules.order.cart.entity.enums.DeliveryMethodEnum;
+import cn.lili.modules.order.order.entity.enums.PayStatusEnum;
 import cn.lili.mybatis.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
@@ -38,7 +39,7 @@ public class Trade extends BaseEntity {
     private String paymentMethod;
 
     /**
-     * @see cn.lili.modules.order.order.entity.enums.PayStatusEnum
+     * @see PayStatusEnum
      */
     @ApiModelProperty(value = "付款状态")
     private String payStatus;
@@ -82,6 +83,7 @@ public class Trade extends BaseEntity {
         }
         BeanUtil.copyProperties(tradeDTO, this);
         BeanUtil.copyProperties(tradeDTO.getPriceDetailDTO(), this);
+        this.setPayStatus(PayStatusEnum.UNPAID.name());
         this.setId(originId);
     }
 }

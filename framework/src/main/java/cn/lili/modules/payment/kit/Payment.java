@@ -129,7 +129,7 @@ public interface Payment {
      * @return 回调地址
      */
     default String callbackUrl(String api, PaymentMethodEnum paymentMethodEnum) {
-        return api + "/buyer/cashier/callback/" + paymentMethodEnum.name();
+        return api + "/buyer/payment/cashier/callback/" + paymentMethodEnum.name();
     }
     /**
      * 支付异步通知地址
@@ -139,7 +139,7 @@ public interface Payment {
      * @return 异步通知地址
      */
     default String notifyUrl(String api, PaymentMethodEnum paymentMethodEnum) {
-        return api + "/buyer/cashier/notify/" + paymentMethodEnum.name();
+        return api + "/buyer/payment/cashier/notify/" + paymentMethodEnum.name();
     }
 
     /**
@@ -150,7 +150,7 @@ public interface Payment {
      * @return 异步通知地址
      */
     default String refundNotifyUrl(String api, PaymentMethodEnum paymentMethodEnum) {
-        return api + "/buyer/cashier/refund/notify/" + paymentMethodEnum.name();
+        return api + "/buyer/payment/cashierRefund/notify/" + paymentMethodEnum.name();
     }
 
 }

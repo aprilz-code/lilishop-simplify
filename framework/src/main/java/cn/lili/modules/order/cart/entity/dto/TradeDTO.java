@@ -106,6 +106,7 @@ public class TradeDTO implements Serializable {
      */
     private MemberAddress memberAddress;
 
+
     /**
      * 客户端类型
      */
@@ -137,7 +138,6 @@ public class TradeDTO implements Serializable {
         this.skuList = new ArrayList<>();
         this.cartList = new ArrayList<>();
         this.skuPromotionDetail = new HashMap<>();
-        this.storeCoupons = new HashMap<>();
         this.storeCoupons = new HashMap<>();
         this.priceDetailDTO = new PriceDetailDTO();
         this.cantUseCoupons = new ArrayList<>();

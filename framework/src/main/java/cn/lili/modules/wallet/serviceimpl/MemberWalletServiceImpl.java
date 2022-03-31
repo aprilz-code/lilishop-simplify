@@ -49,7 +49,6 @@ import java.util.Date;
  * @since 2020-02-25 14:10:16
  */
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, MemberWallet> implements MemberWalletService {
 
     @Autowired
@@ -95,6 +94,7 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean increaseWithdrawal(MemberWalletUpdateDTO memberWalletUpdateDTO) {
         //检测会员预存款讯息是否存在，如果不存在则新建
         MemberWallet memberWallet = this.checkMemberWallet(memberWalletUpdateDTO.getMemberId());
@@ -109,6 +109,7 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean increase(MemberWalletUpdateDTO memberWalletUpdateDTO) {
         //检测会员预存款讯息是否存在，如果不存在则新建
         MemberWallet memberWallet = this.checkMemberWallet(memberWalletUpdateDTO.getMemberId());
@@ -123,6 +124,7 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
 
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean reduce(MemberWalletUpdateDTO memberWalletUpdateDTO) {
         //检测会员预存款讯息是否存在，如果不存在则新建
         MemberWallet memberWallet = this.checkMemberWallet(memberWalletUpdateDTO.getMemberId());
@@ -141,6 +143,7 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
 
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean reduceWithdrawal(MemberWalletUpdateDTO memberWalletUpdateDTO) {
         //检测会员预存款讯息是否存在，如果不存在则新建
         MemberWallet memberWallet = this.checkMemberWallet(memberWalletUpdateDTO.getMemberId());
@@ -160,6 +163,7 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean reduceFrozen(MemberWalletUpdateDTO memberWalletUpdateDTO) {
         //检测会员预存款讯息是否存在，如果不存在则新建
         MemberWallet memberWallet = this.checkMemberWallet(memberWalletUpdateDTO.getMemberId());
@@ -247,6 +251,7 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
      * @return
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean applyWithdrawal(Double price) {
         MemberWithdrawalMessage memberWithdrawalMessage = new MemberWithdrawalMessage();
         AuthUser authUser = UserContext.getCurrentUser();
@@ -262,7 +267,7 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
         if (setting != null) {
             //如果不需要审核则审核自动通过
             WithdrawalSetting withdrawalSetting = new Gson().fromJson(setting.getSettingValue(), WithdrawalSetting.class);
-            if (!withdrawalSetting.getApply()) {
+            if (Boolean.FALSE.equals(withdrawalSetting.getApply())) {
                 memberWithdrawApply.setApplyStatus(WithdrawStatusEnum.VIA_AUDITING.name());
                 memberWithdrawApply.setInspectRemark("系统自动审核通过");
                 //校验金额是否满足提现，因为是从余额扣减，所以校验的是余额
@@ -273,7 +278,7 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
                 memberWithdrawalMessage.setStatus(WithdrawStatusEnum.VIA_AUDITING.name());
                 //微信零钱提现
                 Boolean result = withdrawal(memberWithdrawApply);
-                if (result) {
+                if (Boolean.TRUE.equals(result)) {
                     this.reduce(new MemberWalletUpdateDTO(price, authUser.getId(), "余额提现成功", DepositServiceTypeEnum.WALLET_WITHDRAWAL.name()));
                 }
             } else {

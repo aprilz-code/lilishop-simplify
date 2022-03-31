@@ -62,7 +62,7 @@ public class ConnectUtil {
     private DomainProperties domainProperties;
 
 
-    static String prefix = "/buyer/connect/callback/";
+    static String prefix = "/buyer/passport/connect/connect/callback/";
 
     /**
      * 回调地址获取
