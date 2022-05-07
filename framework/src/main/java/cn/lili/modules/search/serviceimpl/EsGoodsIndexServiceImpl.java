@@ -12,6 +12,7 @@ import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.RetryException;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.elasticsearch.BaseElasticsearchService;
@@ -39,7 +40,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.assertj.core.util.IterableUtil;
-import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.update.UpdateRequest;
@@ -48,18 +48,17 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
 import org.mybatis.spring.MyBatisSystemException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchPage;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ObjectUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -117,8 +116,7 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
     @Autowired
     private RocketmqCustomProperties rocketmqCustomProperties;
     @Autowired
-    @Qualifier("elasticsearchRestTemplate")
-    private ElasticsearchRestTemplate restTemplate;
+    private ElasticsearchOperations restTemplate;
 
     @Override
     public void init() {
@@ -213,6 +211,20 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
         }
     }
 
+    /**
+     * 添加商品索引
+     *
+     * @param goods 商品索引信息
+     */
+    @Override
+    public void addIndex(List<EsGoodsIndex> goods) {
+        try {
+            goodsIndexRepository.saveAll(goods);
+        } catch (Exception e) {
+            log.error("批量为商品生成索引异常", e);
+        }
+    }
+
     @Override
     public void updateIndex(EsGoodsIndex goods) {
         goodsIndexRepository.save(goods);
@@ -257,7 +269,15 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
             script.append("ctx._source.").append(entry.getKey()).append("=").append("'").append(entry.getValue()).append("'").append(";");
         }
         update.setScript(new Script(script.toString()));
-        client.updateByQueryAsync(update, RequestOptions.DEFAULT, this.actionListener());
+        update.setConflicts("proceed");
+        try {
+            BulkByScrollResponse bulkByScrollResponse = client.updateByQuery(update, RequestOptions.DEFAULT);
+            if (bulkByScrollResponse.getVersionConflicts() > 0) {
+                throw new RetryException("更新商品索引失败，es内容版本冲突");
+            }
+        } catch (IOException e) {
+            log.error("更新商品索引异常", e);
+        }
     }
 
     /**
@@ -287,13 +307,30 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
         }
     }
 
+    /**
+     * 删除索引
+     *
+     * @param queryFields 查询条件
+     */
     @Override
-    public void deleteIndex(EsGoodsIndex goods) {
-        if (ObjectUtils.isEmpty(goods)) {
-            //如果对象为空，则删除全量
-            goodsIndexRepository.deleteAll();
+    public void deleteIndex(Map<String, Object> queryFields) {
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        for (Map.Entry<String, Object> entry : queryFields.entrySet()) {
+            boolQueryBuilder.filter(QueryBuilders.termsQuery(entry.getKey(), entry.getValue()));
         }
-        goodsIndexRepository.delete(goods);
+
+        DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest();
+        deleteByQueryRequest.setQuery(boolQueryBuilder);
+        deleteByQueryRequest.indices(getIndexName());
+        deleteByQueryRequest.setConflicts("proceed");
+        try {
+            BulkByScrollResponse bulkByScrollResponse = client.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
+            if (bulkByScrollResponse.getVersionConflicts() > 0) {
+                throw new RetryException("删除索引失败，es内容版本冲突");
+            }
+        } catch (IOException e) {
+            log.error("删除索引异常", e);
+        }
     }
 
     /**
@@ -316,7 +353,6 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
         NativeSearchQueryBuilder queryBuilder = new NativeSearchQueryBuilder();
         queryBuilder.withQuery(QueryBuilders.termsQuery("id", ids.toArray()));
         this.restTemplate.delete(queryBuilder.build(), EsGoodsIndex.class);
-
     }
 
     @Override
@@ -353,6 +389,7 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
             goodsIndexRepository.deleteAll();
             for (EsGoodsIndex goodsIndex : goodsIndexList) {
                 try {
+                    log.info("生成商品索引：{}", goodsIndex);
                     addIndex(goodsIndex);
                     resultMap.put(KEY_SUCCESS, resultMap.get(KEY_SUCCESS) + 1);
                 } catch (Exception e) {
@@ -499,7 +536,7 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
     /**
      * 从索引中删除指定促销活动id的促销活动
      *
-     * @param goodsIndex  索引
+     * @param goodsIndex    索引
      * @param promotionsKey 促销活动key
      */
     private UpdateRequest removePromotionByPromotionKey(EsGoodsIndex goodsIndex, String promotionsKey) {
@@ -773,19 +810,5 @@ public class EsGoodsIndexServiceImpl extends BaseElasticsearchService implements
         Map<String, Object> goodsCurrentPromotionMap = promotionService.getGoodsSkuPromotionMap(index.getStoreId(), index.getId());
         index.setPromotionMapJson(JSONUtil.toJsonStr(goodsCurrentPromotionMap));
         return index;
-    }
-
-    private ActionListener<BulkByScrollResponse> actionListener() {
-        return new ActionListener<BulkByScrollResponse>() {
-            @Override
-            public void onResponse(BulkByScrollResponse bulkByScrollResponse) {
-                log.info("UpdateByQueryResponse: {}", bulkByScrollResponse);
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                log.error("UpdateByQueryRequestFailure: ", e);
-            }
-        };
     }
 }

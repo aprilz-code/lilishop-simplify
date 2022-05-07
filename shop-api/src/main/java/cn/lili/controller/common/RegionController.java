@@ -38,6 +38,11 @@ public class RegionController {
         return ResultUtil.data(regionService.getRegion(cityCode,townName));
     }
 
+    @GetMapping(value = "/name")
+    @ApiOperation(value = "根据名字获取地区地址id")
+    public ResultMessage<String> getItemByLastName(String lastName) {
+        return ResultUtil.data(regionService.getItemByLastName(lastName));
+    }
 
     @GetMapping(value = "/item/{id}")
     @ApiImplicitParam(name = "id", value = "地区ID", required = true, dataType = "String", paramType = "path")

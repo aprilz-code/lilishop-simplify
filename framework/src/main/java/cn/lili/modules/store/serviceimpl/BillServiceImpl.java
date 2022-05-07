@@ -1,7 +1,6 @@
 package cn.lili.modules.store.serviceimpl;
 
 import cn.hutool.core.date.DateTime;
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
@@ -68,14 +67,18 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements Bi
         StoreDetailVO store = storeDetailService.getStoreDetailVO(storeId);
         Bill bill = new Bill();
 
-        //结算基础信息
+        /**
+         * @TODO 结算单基础信息
+         */
         bill.setStartTime(startTime);
-        bill.setEndTime(DateUtil.yesterday());
+        bill.setEndTime(endTime);
         bill.setBillStatus(BillStatusEnum.OUT.name());
         bill.setStoreId(storeId);
         bill.setStoreName(store.getStoreName());
 
-        //设置结算信息
+        /**
+         * @TODO 结算单基础信息
+         */
         bill.setBankAccountName(store.getSettlementBankAccountName());
         bill.setBankAccountNumber(store.getSettlementBankAccountNum());
         bill.setBankCode(store.getSettlementBankJointName());
@@ -84,40 +87,61 @@ public class BillServiceImpl extends ServiceImpl<BillMapper, Bill> implements Bi
         //店铺结算单号
         bill.setSn(SnowFlake.createStr("B"));
 
-        //入账结算信息
-        Bill orderBill = this.baseMapper.getOrderBill(new QueryWrapper<Bill>()
-                .eq("store_id", storeId)
-                .eq("flow_type", FlowTypeEnum.PAY.name())
-                .between("create_time", startTime, endTime));
-        double orderPrice = 0D;
-        if (orderBill != null) {
-            bill.setOrderPrice(orderBill.getOrderPrice());
-            bill.setCommissionPrice(orderBill.getCommissionPrice());
-            bill.setDistributionCommission(orderBill.getDistributionCommission());
-            bill.setSiteCouponCommission(orderBill.getSiteCouponCommission());
-            bill.setPointSettlementPrice(orderBill.getPointSettlementPrice());
-            bill.setKanjiaSettlementPrice(orderBill.getKanjiaSettlementPrice());
-            //入账金额=订单金额
-            orderPrice = orderBill.getBillPrice();
-        }
-
-
         //退款结算信息
         Bill refundBill = this.baseMapper.getRefundBill(new QueryWrapper<Bill>()
                 .eq("store_id", storeId)
                 .eq("flow_type", FlowTypeEnum.REFUND.name())
                 .between("create_time", startTime, endTime));
+        //店铺退款金额
         Double refundPrice = 0D;
         if (refundBill != null) {
+            //退单金额
             bill.setRefundPrice(refundBill.getRefundPrice());
+            //退单产生退还佣金金额
             bill.setRefundCommissionPrice(refundBill.getRefundCommissionPrice());
+            //分销订单退还，返现佣金返还
             bill.setDistributionRefundCommission(refundBill.getDistributionRefundCommission());
+            //退货平台优惠券补贴返还
             bill.setSiteCouponRefundCommission(refundBill.getSiteCouponRefundCommission());
+            //退款金额=店铺最终退款结算金额
             refundPrice = refundBill.getBillPrice();
         }
 
-        //最终结算金额=入款结算金额-退款结算金额
-        Double finalPrice = CurrencyUtil.sub(orderPrice, refundPrice);
+
+        /**
+         *  @TODO 入账结算信息
+         */
+        Bill orderBill = this.baseMapper.getOrderBill(new QueryWrapper<Bill>()
+                .eq("store_id", storeId)
+                .eq("flow_type", FlowTypeEnum.PAY.name())
+                .between("create_time", startTime, endTime));
+        //店铺入款结算金额
+        double orderPrice = 0D;
+
+        if (orderBill != null) {
+            //结算周期内订单付款总金额
+            bill.setOrderPrice(orderBill.getOrderPrice());
+            //平台收取佣金
+            bill.setCommissionPrice(orderBill.getCommissionPrice());
+            //分销返现支出
+            bill.setDistributionCommission(orderBill.getDistributionCommission());
+            //平台优惠券补贴
+            bill.setSiteCouponCommission(orderBill.getSiteCouponCommission());
+            //积分商品结算价格
+            bill.setPointSettlementPrice(orderBill.getPointSettlementPrice());
+            //砍价商品结算价格
+            bill.setKanjiaSettlementPrice(orderBill.getKanjiaSettlementPrice());
+
+            //入款结算金额= 店铺支付结算金额 + 平台优惠券补贴 + 分销订单退还，返现佣金返还+退单产生退还佣金金额
+            orderPrice = CurrencyUtil.add(orderBill.getBillPrice(),
+                    bill.getSiteCouponCommission(),
+                    bill.getDistributionRefundCommission(),
+                    bill.getRefundCommissionPrice());
+        }
+
+        //最终结算金额=入款结算金额-退款结算金额-退货平台优惠券补贴返还
+        Double finalPrice = CurrencyUtil.sub(orderPrice, refundPrice,bill.getSiteCouponRefundCommission());
+        //店铺最终结算金额=最终结算金额
         bill.setBillPrice(finalPrice);
 
         //添加结算单

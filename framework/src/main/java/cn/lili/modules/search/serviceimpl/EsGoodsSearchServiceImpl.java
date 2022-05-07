@@ -11,7 +11,6 @@ import cn.lili.modules.goods.entity.enums.GoodsStatusEnum;
 import cn.lili.modules.search.entity.dos.EsGoodsIndex;
 import cn.lili.modules.search.entity.dos.EsGoodsRelatedInfo;
 import cn.lili.modules.search.entity.dto.EsGoodsSearchDTO;
-import cn.lili.modules.search.entity.dto.HotWordsDTO;
 import cn.lili.modules.search.entity.dto.ParamOptions;
 import cn.lili.modules.search.entity.dto.SelectorOptions;
 import cn.lili.modules.search.service.EsGoodsIndexService;
@@ -36,16 +35,14 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHitSupport;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.SearchPage;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
-import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -73,8 +70,7 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
      * ES
      */
     @Autowired
-    @Qualifier("elasticsearchRestTemplate")
-    private ElasticsearchRestTemplate restTemplate;
+    private ElasticsearchOperations restTemplate;
 
     @Autowired
     private EsGoodsIndexService esGoodsIndexService;
@@ -90,7 +86,7 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
         if (!exists) {
             esGoodsIndexService.init();
         }
-        if (CharSequenceUtil.isNotEmpty(searchDTO.getKeyword())) {
+        if (CharSequenceUtil.isNotBlank(searchDTO.getKeyword())) {
             cache.incrementScore(CachePrefix.HOT_WORD.getPrefix(), searchDTO.getKeyword());
         }
         NativeSearchQueryBuilder searchQueryBuilder = createSearchQueryBuilder(searchDTO, pageVo);
@@ -100,38 +96,6 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
         return SearchHitSupport.searchPageFor(search, searchQuery.getPageable());
     }
 
-    @Override
-    public List<String> getHotWords(Integer count) {
-        if (count == null) {
-            count = 0;
-        }
-        List<String> hotWords = new ArrayList<>();
-        // redis 排序中，下标从0开始，所以这里需要 -1 处理
-        count = count - 1;
-        Set<ZSetOperations.TypedTuple<Object>> set = cache.reverseRangeWithScores(CachePrefix.HOT_WORD.getPrefix(), count);
-        if (set == null || set.isEmpty()) {
-            return new ArrayList<>();
-        }
-        for (ZSetOperations.TypedTuple<Object> defaultTypedTuple : set) {
-            hotWords.add(Objects.requireNonNull(defaultTypedTuple.getValue()).toString());
-        }
-        return hotWords;
-    }
-
-    @Override
-    public void setHotWords(HotWordsDTO hotWords) {
-        cache.incrementScore(CachePrefix.HOT_WORD.getPrefix(), hotWords.getKeywords(), hotWords.getPoint());
-    }
-
-    /**
-     * 删除热门关键词
-     *
-     * @param keywords 热词
-     */
-    @Override
-    public void deleteHotWords(String keywords) {
-        cache.zRemove(CachePrefix.HOT_WORD.getPrefix(), keywords);
-    }
 
     @Override
     public EsGoodsRelatedInfo getSelector(EsGoodsSearchDTO goodsSearch, PageVO pageVo) {
@@ -562,7 +526,8 @@ public class EsGoodsSearchServiceImpl implements EsGoodsSearchService {
      */
     private List<FunctionScoreQueryBuilder.FilterFunctionBuilder> buildKeywordSearch(String keyword) {
         List<FunctionScoreQueryBuilder.FilterFunctionBuilder> filterFunctionBuilders = new ArrayList<>();
-        MatchQueryBuilder goodsNameQuery = QueryBuilders.matchQuery("goodsName", keyword).operator(Operator.AND);
+        // operator 为 AND 时 需全部分词匹配。为 OR 时 需配置 minimumShouldMatch（最小分词匹配数）不设置默认为1
+        MatchQueryBuilder goodsNameQuery = QueryBuilders.matchQuery("goodsName", keyword).operator(Operator.OR).minimumShouldMatch("2");
         //分词匹配
         filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(goodsNameQuery,
                 ScoreFunctionBuilders.weightFactorFunction(10)));

@@ -8,7 +8,6 @@ import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.security.token.Token;
-import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
 import cn.lili.common.vo.ResultMessage;
 import cn.lili.common.vo.SearchVO;
@@ -88,13 +87,10 @@ public class AdminUserManagerController {
 
     @GetMapping(value = "/info")
     @ApiOperation(value = "获取当前登录用户接口")
-    public ResultMessage<AdminUserVO> getUserInfo() {
+    public ResultMessage<AdminUser> getUserInfo() {
         AuthUser tokenUser = UserContext.getCurrentUser();
         if (tokenUser != null) {
-            AdminUserVO adminUser = new AdminUserVO(adminUserService.findByUsername(tokenUser.getUsername()));
-            if (StringUtils.isNotEmpty(adminUser.getDepartmentId())) {
-                adminUser.setDepartmentTitle(departmentService.getById(adminUser.getDepartmentId()).getTitle());
-            }
+            AdminUser adminUser = adminUserService.findByUsername(tokenUser.getUsername());
             adminUser.setPassword(null);
             return ResultUtil.data(adminUser);
         }

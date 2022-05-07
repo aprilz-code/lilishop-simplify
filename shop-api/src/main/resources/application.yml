@@ -133,6 +133,7 @@ ignored:
     - /common/common/slider/**
     - /common/common/sms/**
     - /buyer/payment/cashier/**
+    - /buyer/payment/cashierRefund/**
     - /buyer/other/pageData/**
     - /buyer/other/article/**
     - /buyer/goods/**
@@ -159,10 +160,9 @@ ignored:
     - /swagger-resources/**
     - /swagger/**
     - /webjars/**
-    - /v2/api-docs**
+    - /v2/api-docs
     - /configuration/ui
     - /boot-admin
-    - /manager/promotion/seckill/init
     - /**/*.js
     - /**/*.css
     - /**/*.png
